@@ -48,9 +48,6 @@
   #timer.warn{color:var(--red)}
   #prod{max-width:42vw;background:rgba(6,10,20,.72);border-left:4px solid var(--red);border-radius:6px;padding:8px 12px;font-size:18px;line-height:1.35}
   #prod .tag{font-family:"Bebas Neue",sans-serif;color:var(--red);font-size:14px;letter-spacing:2px;display:block}
-  #talent{left:0;right:0;padding:3.4vh 6vw;text-align:center;background:rgba(0,0,0,.62);
-    font-family:"Bebas Neue",sans-serif;line-height:1.05;letter-spacing:1px}
-  #talent.t-top{top:0} #talent.t-middle{top:50%;transform:translateY(-50%)} #talent.t-bottom{bottom:0}
   .hidden{display:none!important}
   #bar{position:absolute;bottom:0;left:0;right:0;display:flex;gap:8px;padding:8px;background:rgba(0,0,0,.6);
     transition:opacity .3s;font-family:"DM Mono",monospace;font-size:12px;align-items:center}
@@ -66,16 +63,6 @@
   <button class="big" id="openDisplay">Open Talent Display →</button>
   <div class="hint">Opens a second window. In that window click <b>Start Feed</b> and pick your OBS
     <b>Windowed Projector (Program)</b>. Drag it to the talent's screen and press <b>Fullscreen</b>.</div>
-
-  <div class="card">
-    <h2>Talent Text <span class="hctl"><select class="pos" id="talentPos"></select><button class="tog2" id="talentShow">HIDE</button></span></h2>
-    <textarea id="talentText" placeholder="Big text for talent to read…"></textarea>
-    <div class="row">
-      <span style="font-size:11px;color:#8892a6">size</span>
-      <input type="range" id="talentSize" min="4" max="16" step="0.5" value="8">
-      <button class="ghost" id="talentClear">Clear</button>
-    </div>
-  </div>
 
   <div class="card">
     <h2>Producer Note <span class="hctl"><select class="pos" id="prodPos"></select><button class="tog2" id="prodShow">HIDE</button></span></h2>
@@ -131,7 +118,6 @@
   <div id="clock" class="layer"></div>
   <div id="timer" class="layer"></div>
   <div id="prod" class="layer"><span class="tag">PRODUCER</span><span id="prodBody"></span></div>
-  <div id="talent" class="layer"></div>
   <div id="bar">
     <button id="startFeed">Start Feed</button>
     <button class="ghost" id="fs">Fullscreen</button>
@@ -157,7 +143,7 @@ function fmt(ms){
 
 if(isDisplay){
   /* ---------------- DISPLAY ---------------- */
-  const el={clock:clock,timer:timer,prod:prod,prodBody:prodBody,talent:talent,feed:feed,
+  const el={clock:clock,timer:timer,prod:prod,prodBody:prodBody,feed:feed,
             prompter:prompter,chat:chat,bar:bar,status:feedStatus};
   // accept a watch URL, youtu.be link, /live/ link, or a bare 11-char id
   function ytId(s){
@@ -195,13 +181,6 @@ if(isDisplay){
     setPGrid(el.prod, state.prodPos);
     el.prod.classList.toggle("hidden",!(state.prodShow&&state.prodText));
     el.prodBody.textContent=state.prodText||"";
-    // talent
-    const showT=state.talentShow&&state.talentText;
-    ["t-top","t-middle","t-bottom"].forEach(c=>el.talent.classList.remove(c));
-    el.talent.classList.add("t-"+(state.talentPos||"bottom"));
-    el.talent.classList.toggle("hidden",!showT);
-    el.talent.textContent=state.talentText||"";
-    el.talent.style.fontSize=(state.talentSize||8)+"vmin";
     // timer
     setPGrid(el.timer, state.timerPos);
     el.timer.classList.toggle("hidden",!state.timerShow);
@@ -238,7 +217,6 @@ if(isDisplay){
   /* ---------------- CONTROL ---------------- */
   const SAVE="cm_state_v1";
   const state=Object.assign({
-    talentShow:true, talentText:"", talentSize:8, talentPos:"bottom",
     prodShow:true, prodText:"", prodPos:"tl",
     timerShow:true, timerPos:"tc", clockShow:true,
     promptShow:false, promptMode:"full",
@@ -257,17 +235,13 @@ if(isDisplay){
 
   const $=id=>document.getElementById(id);
   // hydrate text inputs
-  $("talentText").value=state.talentText; $("talentSize").value=state.talentSize;
   $("prodText").value=state.prodText; $("promptUrl").value=state.promptUrl;
   $("chatVideo").value=state.chatVideo;
 
   const bind=(id,key,ev="input",val=e=>e.target.value)=>$(id).addEventListener(ev,e=>{state[key]=val(e);send();});
-  bind("talentText","talentText");
-  bind("talentSize","talentSize","input",e=>+e.target.value);
   bind("prodText","prodText");
   bind("promptUrl","promptUrl");
   bind("chatVideo","chatVideo");
-  $("talentClear").onclick=()=>{state.talentText="";$("talentText").value="";send();};
   $("prodClear").onclick=()=>{state.prodText="";$("prodText").value="";send();};
 
   // SHOW/HIDE toggle buttons (label = the action; green = currently shown)
@@ -275,7 +249,7 @@ if(isDisplay){
     const b=$(id), paint=()=>{ b.textContent=state[key]?"HIDE":"SHOW"; b.classList.toggle("on",!!state[key]); };
     b.onclick=()=>{ state[key]=!state[key]; paint(); send(); }; paint();
   }
-  ["talentShow","prodShow","timerShow","clockShow","promptShow","chatShow"].forEach(id=>togBtn(id,id));
+  ["prodShow","timerShow","clockShow","promptShow","chatShow"].forEach(id=>togBtn(id,id));
 
   // position dropdowns (id === state key)
   function fillSel(id,opts){
@@ -285,7 +259,6 @@ if(isDisplay){
     s.addEventListener("change",()=>{ state[id]=s.value; send(); });
   }
   const P9=[["tl","Top left"],["tc","Top center"],["tr","Top right"],["ml","Mid left"],["mc","Center"],["mr","Mid right"],["bl","Bottom left"],["bc","Bottom center"],["br","Bottom right"]];
-  fillSel("talentPos",[["top","Top"],["middle","Middle"],["bottom","Bottom"]]);
   fillSel("prodPos",P9);
   fillSel("timerPos",P9);
   fillSel("chatSide",[["left","Left"],["right","Right"]]);
