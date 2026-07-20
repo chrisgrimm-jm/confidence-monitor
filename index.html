@@ -29,6 +29,8 @@
   button.tog2.on{background:#1f7a3d;color:#fff}
   .hctl{display:flex;gap:8px;align-items:center}
   select.pos{background:#0a0e16;border:1px solid #2a3348;color:#c7cede;border-radius:6px;padding:5px 6px;font-family:"DM Mono",monospace;font-size:11px;cursor:pointer}
+  #webCtrl{width:100%;height:340px;border:1px solid #2a3348;border-radius:8px;background:#fff;margin-top:8px}
+  #webUrl{flex:1}
 
   /* ---------- DISPLAY ---------- */
   #display{position:fixed;inset:0;background:#000;overflow:hidden}
@@ -38,6 +40,9 @@
   #prompter.bottom{top:auto;bottom:0;height:58%;box-shadow:0 -12px 30px rgba(0,0,0,.6)}
   #chat{position:absolute;top:0;bottom:0;width:min(30vw,380px);border:0;background:#fff}
   #chat.left{left:0} #chat.right{right:0}
+  #web{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+  #web.top{bottom:auto;height:58%;box-shadow:0 12px 30px rgba(0,0,0,.6)}
+  #web.bottom{top:auto;bottom:0;height:58%;box-shadow:0 -12px 30px rgba(0,0,0,.6)}
   .layer{position:absolute;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.9)}
   /* shared 9-point placement (producer note + timer) */
   .p-tl{top:16px;left:18px} .p-tc{top:12px;left:50%;transform:translateX(-50%)} .p-tr{top:16px;right:18px}
@@ -103,6 +108,18 @@
   </div>
 
   <div class="card">
+    <h2>Web Page <span class="hctl"><select class="pos" id="webMode"></select><button class="tog2" id="webShow">SHOW</button></span></h2>
+    <div class="row">
+      <input type="text" id="webUrl" placeholder="any URL — notes page, published Google Doc, /preview link…">
+      <button id="webLoad">Load</button>
+    </div>
+    <div class="hint">Shows this page on the talent monitor and lets you interact with it in the producer copy below.
+      Pages that block embedding won't load; the Google Docs <b>editor</b> is one of them — use a
+      <b>Published to web</b> or <code>/preview</code> link (read-only, auto-updates as you edit the doc in a normal tab).</div>
+    <iframe id="webCtrl" title="producer copy"></iframe>
+  </div>
+
+  <div class="card">
     <h2>YouTube Chat <span class="hctl"><select class="pos" id="chatSide"></select><button class="tog2" id="chatShow">SHOW</button></span></h2>
     <input type="text" id="chatVideo" placeholder="live video URL or ID (e.g. dQw4w9WgXcQ)">
     <div class="hint">Live chat only appears for a video that's <b>currently live</b>. Requires this page to be
@@ -115,6 +132,7 @@
   <video id="feed" autoplay muted playsinline></video>
   <iframe id="prompter" class="hidden" allow="autoplay"></iframe>
   <iframe id="chat" class="hidden"></iframe>
+  <iframe id="web" class="hidden"></iframe>
   <div id="clock" class="layer"></div>
   <div id="timer" class="layer"></div>
   <div id="prod" class="layer"><span class="tag">PRODUCER</span><span id="prodBody"></span></div>
@@ -144,7 +162,7 @@ function fmt(ms){
 if(isDisplay){
   /* ---------------- DISPLAY ---------------- */
   const el={clock:clock,timer:timer,prod:prod,prodBody:prodBody,feed:feed,
-            prompter:prompter,chat:chat,bar:bar,status:feedStatus};
+            prompter:prompter,chat:chat,web:web,bar:bar,status:feedStatus};
   // accept a watch URL, youtu.be link, /live/ link, or a bare 11-char id
   function ytId(s){
     s=(s||"").trim();
@@ -201,6 +219,14 @@ if(isDisplay){
     el.chat.classList.toggle("hidden",!showC);
     el.chat.classList.remove("left","right");
     el.chat.classList.add(state.chatSide==="left"?"left":"right");
+    // arbitrary web page (producer drives an interactive copy in Control; talent sees this)
+    const showW=state.webShow&&state.webUrl;
+    if(showW && el.web.getAttribute("data-src")!==state.webUrl){
+      el.web.src=state.webUrl; el.web.setAttribute("data-src",state.webUrl);
+    }
+    el.web.classList.toggle("hidden",!showW);
+    el.web.classList.remove("top","bottom");
+    if(state.webMode==="top"||state.webMode==="bottom") el.web.classList.add(state.webMode);
   }
   // 4x/sec tick for clock + running timer
   setInterval(()=>{
@@ -222,6 +248,7 @@ if(isDisplay){
     promptShow:false, promptMode:"full",
     promptUrl:"https://chrisgrimm-jm.github.io/prompter/display.html?topic=adread",
     chatShow:false, chatVideo:"", chatSide:"right",
+    webShow:false, webUrl:"", webMode:"full",
     timer:{mode:"down", running:false, remaining:5*60000, endAt:0, elapsed:0, startAt:0}
   }, JSON.parse(localStorage.getItem(SAVE)||"{}"));
 
@@ -237,19 +264,24 @@ if(isDisplay){
   // hydrate text inputs
   $("prodText").value=state.prodText; $("promptUrl").value=state.promptUrl;
   $("chatVideo").value=state.chatVideo;
+  $("webUrl").value=state.webUrl; if(state.webUrl) $("webCtrl").src=state.webUrl;
 
   const bind=(id,key,ev="input",val=e=>e.target.value)=>$(id).addEventListener(ev,e=>{state[key]=val(e);send();});
   bind("prodText","prodText");
   bind("promptUrl","promptUrl");
   bind("chatVideo","chatVideo");
   $("prodClear").onclick=()=>{state.prodText="";$("prodText").value="";send();};
+  // web page: Load button drives both the producer copy and the Display (no reload-per-keystroke)
+  function loadWeb(){ state.webUrl=$("webUrl").value.trim(); $("webCtrl").src=state.webUrl; send(); }
+  $("webLoad").onclick=loadWeb;
+  $("webUrl").addEventListener("keydown",e=>{ if(e.key==="Enter") loadWeb(); });
 
   // SHOW/HIDE toggle buttons (label = the action; green = currently shown)
   function togBtn(id,key){
     const b=$(id), paint=()=>{ b.textContent=state[key]?"HIDE":"SHOW"; b.classList.toggle("on",!!state[key]); };
     b.onclick=()=>{ state[key]=!state[key]; paint(); send(); }; paint();
   }
-  ["prodShow","timerShow","clockShow","promptShow","chatShow"].forEach(id=>togBtn(id,id));
+  ["prodShow","timerShow","clockShow","promptShow","chatShow","webShow"].forEach(id=>togBtn(id,id));
 
   // position dropdowns (id === state key)
   function fillSel(id,opts){
@@ -262,6 +294,7 @@ if(isDisplay){
   fillSel("prodPos",P9);
   fillSel("timerPos",P9);
   fillSel("chatSide",[["left","Left"],["right","Right"]]);
+  fillSel("webMode",[["full","Full screen"],["top","Top band"],["bottom","Bottom band"]]);
 
   // teleprompter band mode (scoped seg)
   document.querySelectorAll("#promptModeSeg button").forEach(b=>b.onclick=()=>{
