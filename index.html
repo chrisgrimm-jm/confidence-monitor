@@ -1,0 +1,335 @@
+<meta charset="utf-8">
+<title>Confidence Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{ --red:#E40000; --blue:#00B7FF; --navy:#0a1024; --bg:#000; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:#fff;font-family:"DM Mono",ui-monospace,monospace}
+
+  /* ---------- CONTROL ---------- */
+  #control{max-width:620px;margin:0 auto;padding:20px 18px 60px}
+  #control h1{font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:1px;margin:0 0 2px;color:#fff}
+  #control .sub{color:#8892a6;font-size:12px;margin-bottom:18px}
+  .card{background:#11151f;border:1px solid #232a3a;border-radius:10px;padding:14px 14px 16px;margin:12px 0}
+  .card h2{font-family:"Bebas Neue",sans-serif;font-size:18px;letter-spacing:1px;margin:0 0 10px;color:var(--blue);display:flex;justify-content:space-between;align-items:center}
+  label.tog{font-size:12px;color:#c7cede;font-family:"DM Mono",monospace;display:flex;gap:6px;align-items:center;cursor:pointer}
+  textarea,input[type=text]{width:100%;background:#0a0e16;border:1px solid #2a3348;color:#fff;border-radius:8px;padding:10px;font-family:"DM Mono",monospace;font-size:14px}
+  textarea{resize:vertical;min-height:64px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+  button{background:var(--red);color:#fff;border:0;border-radius:8px;padding:9px 14px;font-family:"Bebas Neue",sans-serif;font-size:16px;letter-spacing:1px;cursor:pointer}
+  button.ghost{background:#1c2333}
+  button.big{width:100%;font-size:22px;padding:14px}
+  .time-in{width:64px;text-align:center;font-size:20px}
+  .seg{background:#1c2333;border-radius:8px;padding:2px;display:inline-flex}
+  .seg button{background:transparent;padding:6px 12px;font-size:14px}
+  .seg button.on{background:var(--blue);color:#00111a}
+  .hint{color:#6b768c;font-size:11px;margin-top:6px;line-height:1.4}
+  input[type=range]{width:100%}
+  button.tog2{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:1px;padding:5px 14px;border-radius:6px;background:#2a3348;color:#c7cede}
+  button.tog2.on{background:#1f7a3d;color:#fff}
+  .hctl{display:flex;gap:8px;align-items:center}
+  select.pos{background:#0a0e16;border:1px solid #2a3348;color:#c7cede;border-radius:6px;padding:5px 6px;font-family:"DM Mono",monospace;font-size:11px;cursor:pointer}
+
+  /* ---------- DISPLAY ---------- */
+  #display{position:fixed;inset:0;background:#000;overflow:hidden}
+  #feed{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+  #prompter{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0b0b0b}
+  #prompter.top{bottom:auto;height:58%;box-shadow:0 12px 30px rgba(0,0,0,.6)}
+  #prompter.bottom{top:auto;bottom:0;height:58%;box-shadow:0 -12px 30px rgba(0,0,0,.6)}
+  #chat{position:absolute;top:0;bottom:0;width:min(30vw,380px);border:0;background:#fff}
+  #chat.left{left:0} #chat.right{right:0}
+  .layer{position:absolute;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.9)}
+  /* shared 9-point placement (producer note + timer) */
+  .p-tl{top:16px;left:18px} .p-tc{top:12px;left:50%;transform:translateX(-50%)} .p-tr{top:16px;right:18px}
+  .p-ml{top:50%;left:18px;transform:translateY(-50%)} .p-mc{top:50%;left:50%;transform:translate(-50%,-50%)} .p-mr{top:50%;right:18px;transform:translateY(-50%)}
+  .p-bl{bottom:16px;left:18px} .p-bc{bottom:16px;left:50%;transform:translateX(-50%)} .p-br{bottom:16px;right:18px}
+  #clock{top:14px;right:18px;font-family:"DM Mono",monospace;font-size:34px;font-weight:500;letter-spacing:1px}
+  #timer{font-family:"DM Mono",monospace;font-size:64px;font-weight:500;letter-spacing:2px;line-height:1}
+  #timer.warn{color:var(--red)}
+  #prod{max-width:42vw;background:rgba(6,10,20,.72);border-left:4px solid var(--red);border-radius:6px;padding:8px 12px;font-size:18px;line-height:1.35}
+  #prod .tag{font-family:"Bebas Neue",sans-serif;color:var(--red);font-size:14px;letter-spacing:2px;display:block}
+  #talent{left:0;right:0;padding:3.4vh 6vw;text-align:center;background:rgba(0,0,0,.62);
+    font-family:"Bebas Neue",sans-serif;line-height:1.05;letter-spacing:1px}
+  #talent.t-top{top:0} #talent.t-middle{top:50%;transform:translateY(-50%)} #talent.t-bottom{bottom:0}
+  .hidden{display:none!important}
+  #bar{position:absolute;bottom:0;left:0;right:0;display:flex;gap:8px;padding:8px;background:rgba(0,0,0,.6);
+    transition:opacity .3s;font-family:"DM Mono",monospace;font-size:12px;align-items:center}
+  #bar.idle{opacity:0}
+  #bar .status{color:#8892a6;margin-left:auto}
+</style>
+
+<!-- ===== CONTROL MARKUP ===== -->
+<div id="control">
+  <h1>Confidence Monitor · Control</h1>
+  <div class="sub">In-studio talent monitor. Overlays show only here — never on the program feed.</div>
+
+  <button class="big" id="openDisplay">Open Talent Display →</button>
+  <div class="hint">Opens a second window. In that window click <b>Start Feed</b> and pick your OBS
+    <b>Windowed Projector (Program)</b>. Drag it to the talent's screen and press <b>Fullscreen</b>.</div>
+
+  <div class="card">
+    <h2>Talent Text <span class="hctl"><select class="pos" id="talentPos"></select><button class="tog2" id="talentShow">HIDE</button></span></h2>
+    <textarea id="talentText" placeholder="Big text for talent to read…"></textarea>
+    <div class="row">
+      <span style="font-size:11px;color:#8892a6">size</span>
+      <input type="range" id="talentSize" min="4" max="16" step="0.5" value="8">
+      <button class="ghost" id="talentClear">Clear</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Producer Note <span class="hctl"><select class="pos" id="prodPos"></select><button class="tog2" id="prodShow">HIDE</button></span></h2>
+    <input type="text" id="prodText" placeholder="Private aside to talent…">
+    <div class="row"><button class="ghost" id="prodClear">Clear</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Timer <span class="hctl"><select class="pos" id="timerPos"></select><button class="tog2" id="timerShow">HIDE</button></span></h2>
+    <div class="row">
+      <span class="seg" id="timerMode"><button data-mode="down" class="on">Countdown</button><button data-mode="up">Count up</button></span>
+    </div>
+    <div class="row" id="downInputs">
+      <input class="time-in" type="text" id="mm" value="05">:<input class="time-in" type="text" id="ss" value="00">
+      <span style="font-size:11px;color:#8892a6">min : sec</span>
+    </div>
+    <div class="row">
+      <button id="tStart">Start</button>
+      <button class="ghost" id="tPause">Pause</button>
+      <button class="ghost" id="tReset">Reset</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Clock <button class="tog2" id="clockShow">HIDE</button></h2>
+    <div class="hint">Wall-clock time of day, top-right.</div>
+  </div>
+
+  <div class="card">
+    <h2>Teleprompter <button class="tog2" id="promptShow">SHOW</button></h2>
+    <input type="text" id="promptUrl" placeholder="prompter display URL">
+    <div class="row">
+      <span class="seg" id="promptModeSeg"><button data-pmode="full" class="on">Full screen</button><button data-pmode="top">Top band</button><button data-pmode="bottom">Bottom band</button></span>
+    </div>
+    <div class="hint">Embeds your <a href="https://chrisgrimm-jm.github.io/prompter/control.html?topic=adread" target="_blank">prompter</a> display. Drive scripts / play / speed from its own
+      <a href="https://chrisgrimm-jm.github.io/prompter/control.html?topic=adread" target="_blank">control page</a> — this just shows or hides it on the monitor.
+      Match the <code>?topic=</code> in both URLs.</div>
+  </div>
+
+  <div class="card">
+    <h2>YouTube Chat <span class="hctl"><select class="pos" id="chatSide"></select><button class="tog2" id="chatShow">SHOW</button></span></h2>
+    <input type="text" id="chatVideo" placeholder="live video URL or ID (e.g. dQw4w9WgXcQ)">
+    <div class="hint">Live chat only appears for a video that's <b>currently live</b>. Requires this page to be
+      hosted (GitHub Pages) — YouTube won't embed chat from a local <code>file://</code>.</div>
+  </div>
+</div>
+
+<!-- ===== DISPLAY MARKUP ===== -->
+<div id="display" class="hidden">
+  <video id="feed" autoplay muted playsinline></video>
+  <iframe id="prompter" class="hidden" allow="autoplay"></iframe>
+  <iframe id="chat" class="hidden"></iframe>
+  <div id="clock" class="layer"></div>
+  <div id="timer" class="layer"></div>
+  <div id="prod" class="layer"><span class="tag">PRODUCER</span><span id="prodBody"></span></div>
+  <div id="talent" class="layer"></div>
+  <div id="bar">
+    <button id="startFeed">Start Feed</button>
+    <button class="ghost" id="fs">Fullscreen</button>
+    <span class="status" id="feedStatus">no feed — click Start Feed, pick OBS projector window</span>
+  </div>
+</div>
+
+<script>
+const isDisplay = location.hash === "#display";
+document.getElementById(isDisplay ? "control" : "display").classList.add("hidden");
+document.getElementById(isDisplay ? "display" : "control").classList.remove("hidden");
+
+/* ---- shared timer math (anchors are absolute Date.now ms; same machine so clocks agree) ---- */
+function timerValueMs(t){
+  if(!t) return 0;
+  if(t.mode==="up")   return t.running ? Date.now()-t.startAt : t.elapsed;
+  /* down */          return Math.max(0, t.running ? t.endAt-Date.now() : t.remaining);
+}
+function fmt(ms){
+  const s=Math.floor(ms/1000), m=Math.floor(s/60), r=s%60;
+  return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0");
+}
+
+if(isDisplay){
+  /* ---------------- DISPLAY ---------------- */
+  const el={clock:clock,timer:timer,prod:prod,prodBody:prodBody,talent:talent,feed:feed,
+            prompter:prompter,chat:chat,bar:bar,status:feedStatus};
+  // accept a watch URL, youtu.be link, /live/ link, or a bare 11-char id
+  function ytId(s){
+    s=(s||"").trim();
+    const m=s.match(/[?&]v=([\w-]{11})/)||s.match(/(?:youtu\.be|\/live|\/embed)\/([\w-]{11})/)||s.match(/^([\w-]{11})$/);
+    return m?m[1]:"";
+  }
+  let state=null;
+
+  window.addEventListener("message",e=>{ if(e.data&&e.data.type==="state"){ state=e.data.state; render(); }});
+  if(window.opener) window.opener.postMessage({type:"ready"},"*");
+
+  startFeed.onclick=async()=>{
+    try{
+      const s=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:60},audio:false});
+      el.feed.srcObject=s; el.status.textContent="feed live";
+      s.getVideoTracks()[0].onended=()=>{el.feed.srcObject=null;el.status.textContent="feed stopped";};
+    }catch(err){ el.status.textContent="feed cancelled"; }
+  };
+  fs.onclick=()=>{ document.documentElement.requestFullscreen?.(); };
+
+  /* auto-hide toolbar */
+  let idle; const wake=()=>{el.bar.classList.remove("idle");clearTimeout(idle);
+    idle=setTimeout(()=>el.bar.classList.add("idle"),2500);};
+  document.addEventListener("mousemove",wake); wake();
+
+  const PGRID=["tl","tc","tr","ml","mc","mr","bl","bc","br"];
+  function setPGrid(elm,pos){ PGRID.forEach(p=>elm.classList.remove("p-"+p)); elm.classList.add("p-"+(pos||"tl")); }
+
+  function render(){
+    if(!state) return;
+    // clock
+    el.clock.classList.toggle("hidden",!state.clockShow);
+    // producer
+    setPGrid(el.prod, state.prodPos);
+    el.prod.classList.toggle("hidden",!(state.prodShow&&state.prodText));
+    el.prodBody.textContent=state.prodText||"";
+    // talent
+    const showT=state.talentShow&&state.talentText;
+    ["t-top","t-middle","t-bottom"].forEach(c=>el.talent.classList.remove(c));
+    el.talent.classList.add("t-"+(state.talentPos||"bottom"));
+    el.talent.classList.toggle("hidden",!showT);
+    el.talent.textContent=state.talentText||"";
+    el.talent.style.fontSize=(state.talentSize||8)+"vmin";
+    // timer
+    setPGrid(el.timer, state.timerPos);
+    el.timer.classList.toggle("hidden",!state.timerShow);
+    // teleprompter (embed the prompter's own display; it syncs itself via Firebase)
+    const showP=state.promptShow&&state.promptUrl;
+    if(showP && el.prompter.getAttribute("data-src")!==state.promptUrl){
+      el.prompter.src=state.promptUrl; el.prompter.setAttribute("data-src",state.promptUrl);
+    }
+    el.prompter.classList.toggle("hidden",!showP);
+    el.prompter.classList.remove("top","bottom");
+    if(state.promptMode==="top"||state.promptMode==="bottom") el.prompter.classList.add(state.promptMode);
+    // youtube live chat (embed_domain must be the host serving this page — not file://)
+    const id=ytId(state.chatVideo), showC=state.chatShow&&id&&location.hostname;
+    if(showC){
+      const src="https://www.youtube.com/live_chat?v="+id+"&embed_domain="+location.hostname;
+      if(el.chat.getAttribute("data-src")!==src){ el.chat.src=src; el.chat.setAttribute("data-src",src); }
+    }
+    el.chat.classList.toggle("hidden",!showC);
+    el.chat.classList.remove("left","right");
+    el.chat.classList.add(state.chatSide==="left"?"left":"right");
+  }
+  // 4x/sec tick for clock + running timer
+  setInterval(()=>{
+    const d=new Date();
+    el.clock.textContent=d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    if(state&&state.timerShow&&state.timer){
+      const ms=timerValueMs(state.timer);
+      el.timer.textContent=fmt(ms);
+      el.timer.classList.toggle("warn", state.timer.mode==="down" && ms<=10000);
+    }
+  },250);
+
+} else {
+  /* ---------------- CONTROL ---------------- */
+  const SAVE="cm_state_v1";
+  const state=Object.assign({
+    talentShow:true, talentText:"", talentSize:8, talentPos:"bottom",
+    prodShow:true, prodText:"", prodPos:"tl",
+    timerShow:true, timerPos:"tc", clockShow:true,
+    promptShow:false, promptMode:"full",
+    promptUrl:"https://chrisgrimm-jm.github.io/prompter/display.html?topic=adread",
+    chatShow:false, chatVideo:"", chatSide:"right",
+    timer:{mode:"down", running:false, remaining:5*60000, endAt:0, elapsed:0, startAt:0}
+  }, JSON.parse(localStorage.getItem(SAVE)||"{}"));
+
+  let disp=null;
+  function send(){ localStorage.setItem(SAVE,JSON.stringify(state)); disp?.postMessage({type:"state",state},"*"); }
+  window.addEventListener("message",e=>{ if(e.data&&e.data.type==="ready") send(); });
+
+  openDisplay.onclick=()=>{
+    disp=window.open(location.pathname+"#display","cm_display","width=1280,height=720");
+  };
+
+  const $=id=>document.getElementById(id);
+  // hydrate text inputs
+  $("talentText").value=state.talentText; $("talentSize").value=state.talentSize;
+  $("prodText").value=state.prodText; $("promptUrl").value=state.promptUrl;
+  $("chatVideo").value=state.chatVideo;
+
+  const bind=(id,key,ev="input",val=e=>e.target.value)=>$(id).addEventListener(ev,e=>{state[key]=val(e);send();});
+  bind("talentText","talentText");
+  bind("talentSize","talentSize","input",e=>+e.target.value);
+  bind("prodText","prodText");
+  bind("promptUrl","promptUrl");
+  bind("chatVideo","chatVideo");
+  $("talentClear").onclick=()=>{state.talentText="";$("talentText").value="";send();};
+  $("prodClear").onclick=()=>{state.prodText="";$("prodText").value="";send();};
+
+  // SHOW/HIDE toggle buttons (label = the action; green = currently shown)
+  function togBtn(id,key){
+    const b=$(id), paint=()=>{ b.textContent=state[key]?"HIDE":"SHOW"; b.classList.toggle("on",!!state[key]); };
+    b.onclick=()=>{ state[key]=!state[key]; paint(); send(); }; paint();
+  }
+  ["talentShow","prodShow","timerShow","clockShow","promptShow","chatShow"].forEach(id=>togBtn(id,id));
+
+  // position dropdowns (id === state key)
+  function fillSel(id,opts){
+    const s=$(id);
+    opts.forEach(([v,l])=>{ const o=document.createElement("option"); o.value=v; o.textContent=l; s.appendChild(o); });
+    s.value=state[id];
+    s.addEventListener("change",()=>{ state[id]=s.value; send(); });
+  }
+  const P9=[["tl","Top left"],["tc","Top center"],["tr","Top right"],["ml","Mid left"],["mc","Center"],["mr","Mid right"],["bl","Bottom left"],["bc","Bottom center"],["br","Bottom right"]];
+  fillSel("talentPos",[["top","Top"],["middle","Middle"],["bottom","Bottom"]]);
+  fillSel("prodPos",P9);
+  fillSel("timerPos",P9);
+  fillSel("chatSide",[["left","Left"],["right","Right"]]);
+
+  // teleprompter band mode (scoped seg)
+  document.querySelectorAll("#promptModeSeg button").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll("#promptModeSeg button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on"); state.promptMode=b.dataset.pmode; send();
+  });
+  document.querySelectorAll("#promptModeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.pmode===state.promptMode));
+
+  // timer
+  const downInputs=$("downInputs");
+  document.querySelectorAll("#timerMode button").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll("#timerMode button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    state.timer.mode=b.dataset.mode; state.timer.running=false;
+    downInputs.style.display = b.dataset.mode==="down" ? "" : "none";
+    send();
+  });
+  function setDownFromInputs(){
+    const m=parseInt($("mm").value||"0",10), s=parseInt($("ss").value||"0",10);
+    state.timer.remaining=(m*60+s)*1000;
+  }
+  $("tStart").onclick=()=>{
+    const t=state.timer;
+    if(t.mode==="down"){ if(!t.running){ if(!t.endAt||t.remaining<=0) setDownFromInputs();
+        t.endAt=Date.now()+t.remaining; t.running=true; } }
+    else { t.startAt=Date.now()-(t.elapsed||0); t.running=true; }
+    send();
+  };
+  $("tPause").onclick=()=>{
+    const t=state.timer;
+    if(!t.running){send();return;}
+    if(t.mode==="down") t.remaining=Math.max(0,t.endAt-Date.now());
+    else t.elapsed=Date.now()-t.startAt;
+    t.running=false; send();
+  };
+  $("tReset").onclick=()=>{
+    const t=state.timer; t.running=false;
+    if(t.mode==="down"){ setDownFromInputs(); t.endAt=0; }
+    else t.elapsed=0;
+    send();
+  };
+  setDownFromInputs();
+}
+</script>
