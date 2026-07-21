@@ -29,6 +29,7 @@
   button.tog2.on{background:#1f7a3d;color:#fff}
   .hctl{display:flex;gap:8px;align-items:center}
   select.pos{background:#0a0e16;border:1px solid #2a3348;color:#c7cede;border-radius:6px;padding:5px 6px;font-family:"DM Mono",monospace;font-size:11px;cursor:pointer}
+  .pl{display:block;font-family:"Bebas Neue",sans-serif;font-size:13px;letter-spacing:1px;color:#8892a6;margin:10px 0 4px}
 
   /* ---------- DISPLAY ---------- */
   #display{position:fixed;inset:0;background:#000;overflow:hidden}
@@ -107,10 +108,12 @@
 
   <div class="card">
     <h2>Web / Doc <span class="hctl"><select class="pos" id="webMode"></select><button class="tog2" id="webShow">SHOW</button></span></h2>
-    <div class="hint">Mirrors any browser window onto the talent monitor — a Google Doc (editor and all), notes, any site.
-      In the <b>Display</b> window click <b>Capture Window</b> and pick the browser window showing your page.
-      Then just work in that window on your own screen — your scrolling and edits appear live for the talent.
-      Toggle <b>SHOW</b> and pick Full / Top band / Bottom band here.</div>
+    <label class="pl">Source</label>
+    <select class="pos" id="webSource" style="width:100%"><option value="">— capture a window in the Display —</option></select>
+    <div class="hint">Add windows once: in the <b>Display</b> window click <b>Capture Window</b> for each browser window / monitor
+      you want available (a Google Doc editor, notes, any site). They appear in the <b>Source</b> list above —
+      pick which one the talent sees, then <b>SHOW</b> and choose Full / Top band / Bottom band. Work in the real window on
+      your own screen; your scrolling and edits mirror live.</div>
   </div>
 
   <div class="card">
@@ -176,11 +179,21 @@ if(isDisplay){
       s.getVideoTracks()[0].onended=()=>{el.feed.srcObject=null;el.status.textContent="feed stopped";};
     }catch(err){ el.status.textContent="feed cancelled"; }
   };
+  // captured windows/screens live here (streams can't cross windows, so capture happens in Display)
+  let webSources=[], webSeq=0;
+  function postSources(){
+    if(window.opener) window.opener.postMessage({type:"sources", list:webSources.map(s=>({id:s.id,label:s.label}))}, "*");
+  }
   capWeb.onclick=async()=>{
     try{
-      const s=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30},audio:false});
-      el.web.srcObject=s; render();
-      s.getVideoTracks()[0].onended=()=>{ el.web.srcObject=null; render(); };
+      const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:60},audio:false});
+      const track=stream.getVideoTracks()[0];
+      const surface=(track.getSettings&&track.getSettings().displaySurface)||"source";
+      const id="w"+(++webSeq);
+      const label=surface.charAt(0).toUpperCase()+surface.slice(1)+" "+webSeq;   // "Window 1", "Monitor 2", "Browser 3"
+      webSources.push({id,label,stream});
+      track.onended=()=>{ webSources=webSources.filter(s=>s.id!==id); postSources(); render(); };
+      postSources(); render();
     }catch(err){}
   };
   fs.onclick=()=>{ document.documentElement.requestFullscreen?.(); };
@@ -221,8 +234,11 @@ if(isDisplay){
     el.chat.classList.toggle("hidden",!showC);
     el.chat.classList.remove("left","right");
     el.chat.classList.add(state.chatSide==="left"?"left":"right");
-    // captured browser window (producer works in the real window; talent sees the pixels live)
-    const showW=state.webShow && !!el.web.srcObject;
+    // captured window/screen selected from Control's dropdown (producer works in the real window; talent sees pixels)
+    const src=webSources.find(s=>s.id===state.webSource);
+    if(src){ if(el.web.srcObject!==src.stream) el.web.srcObject=src.stream; }
+    else if(el.web.srcObject){ el.web.srcObject=null; }
+    const showW=state.webShow && !!src;
     el.web.classList.toggle("hidden",!showW);
     el.web.classList.remove("top","bottom");
     if(state.webMode==="top"||state.webMode==="bottom") el.web.classList.add(state.webMode);
@@ -247,13 +263,29 @@ if(isDisplay){
     promptShow:false, promptMode:"full",
     promptUrl:"https://chrisgrimm-jm.github.io/prompter/display.html?topic=adread",
     chatShow:false, chatVideo:"", chatSide:"right",
-    webShow:false, webMode:"full",
+    webShow:false, webMode:"full", webSource:"",
     timer:{mode:"down", running:false, remaining:5*60000, endAt:0, elapsed:0, startAt:0}
   }, JSON.parse(localStorage.getItem(SAVE)||"{}"));
 
-  let disp=null;
+  let disp=null, webSourcesList=[];
   function send(){ localStorage.setItem(SAVE,JSON.stringify(state)); disp?.postMessage({type:"state",state},"*"); }
-  window.addEventListener("message",e=>{ if(e.data&&e.data.type==="ready") send(); });
+  window.addEventListener("message",e=>{
+    if(!e.data) return;
+    if(e.data.type==="ready"){ send(); }
+    else if(e.data.type==="sources"){
+      webSourcesList=e.data.list||[];
+      // drop a stale selection; auto-select the newest capture when nothing valid is chosen
+      if(state.webSource && !webSourcesList.some(s=>s.id===state.webSource)) state.webSource="";
+      if(!state.webSource && webSourcesList.length) state.webSource=webSourcesList[webSourcesList.length-1].id;
+      renderWebSources(); send();
+    }
+  });
+  function renderWebSources(){
+    const s=$("webSource"); s.innerHTML="";
+    if(!webSourcesList.length){ s.innerHTML='<option value="">— capture a window in the Display —</option>'; }
+    else webSourcesList.forEach(src=>{ const o=document.createElement("option"); o.value=src.id; o.textContent=src.label; s.appendChild(o); });
+    s.value=state.webSource||"";
+  }
 
   openDisplay.onclick=()=>{
     disp=window.open(location.pathname+"#display","cm_display","width=1280,height=720");
@@ -289,6 +321,7 @@ if(isDisplay){
   fillSel("timerPos",P9);
   fillSel("chatSide",[["left","Left"],["right","Right"]]);
   fillSel("webMode",[["full","Full screen"],["top","Top band"],["bottom","Bottom band"]]);
+  $("webSource").addEventListener("change",()=>{ state.webSource=$("webSource").value; send(); });
 
   // teleprompter band mode (scoped seg)
   document.querySelectorAll("#promptModeSeg button").forEach(b=>b.onclick=()=>{
