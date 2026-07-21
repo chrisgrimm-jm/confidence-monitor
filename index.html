@@ -272,7 +272,11 @@ if(isDisplay){
   bind("chatVideo","chatVideo");
   $("prodClear").onclick=()=>{state.prodText="";$("prodText").value="";send();};
   // web page: Load button drives both the producer copy and the Display (no reload-per-keystroke)
-  function loadWeb(){ state.webUrl=$("webUrl").value.trim(); $("webCtrl").src=state.webUrl; send(); }
+  function loadWeb(){
+    let u=$("webUrl").value.trim();
+    if(u && !/^https?:\/\//i.test(u)) u="https://"+u;   // bare "example.com" -> absolute, else it 404s as a relative path
+    state.webUrl=u; $("webUrl").value=u; $("webCtrl").src=u||"about:blank"; send();
+  }
   $("webLoad").onclick=loadWeb;
   $("webUrl").addEventListener("keydown",e=>{ if(e.key==="Enter") loadWeb(); });
 
