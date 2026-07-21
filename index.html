@@ -193,8 +193,12 @@ if(isDisplay){
       const label=surface.charAt(0).toUpperCase()+surface.slice(1)+" "+webSeq;   // "Window 1", "Monitor 2", "Browser 3"
       webSources.push({id,label,stream});
       track.onended=()=>{ webSources=webSources.filter(s=>s.id!==id); postSources(); render(); };
-      postSources(); render();
-    }catch(err){}
+      el.status.textContent="captured "+label; postSources(); render();
+    }catch(err){
+      el.status.textContent = err && err.name==="NotAllowedError"
+        ? "capture cancelled — if windows were missing/blank, grant Screen Recording to this browser (System Settings ▸ Privacy) and restart it"
+        : "capture failed: "+((err&&err.message)||err);
+    }
   };
   fs.onclick=()=>{ document.documentElement.requestFullscreen?.(); };
 
