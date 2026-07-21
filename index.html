@@ -29,8 +29,6 @@
   button.tog2.on{background:#1f7a3d;color:#fff}
   .hctl{display:flex;gap:8px;align-items:center}
   select.pos{background:#0a0e16;border:1px solid #2a3348;color:#c7cede;border-radius:6px;padding:5px 6px;font-family:"DM Mono",monospace;font-size:11px;cursor:pointer}
-  #webCtrl{width:100%;height:340px;border:1px solid #2a3348;border-radius:8px;background:#fff;margin-top:8px}
-  #webUrl{flex:1}
 
   /* ---------- DISPLAY ---------- */
   #display{position:fixed;inset:0;background:#000;overflow:hidden}
@@ -40,7 +38,7 @@
   #prompter.bottom{top:auto;bottom:0;height:58%;box-shadow:0 -12px 30px rgba(0,0,0,.6)}
   #chat{position:absolute;top:0;bottom:0;width:min(30vw,380px);border:0;background:#fff}
   #chat.left{left:0} #chat.right{right:0}
-  #web{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+  #web{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
   #web.top{bottom:auto;height:58%;box-shadow:0 12px 30px rgba(0,0,0,.6)}
   #web.bottom{top:auto;bottom:0;height:58%;box-shadow:0 -12px 30px rgba(0,0,0,.6)}
   .layer{position:absolute;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.9)}
@@ -108,16 +106,11 @@
   </div>
 
   <div class="card">
-    <h2>Web Page <span class="hctl"><select class="pos" id="webMode"></select><button class="tog2" id="webShow">SHOW</button></span></h2>
-    <div class="row">
-      <input type="text" id="webUrl" placeholder="any URL — notes page, published Google Doc, /preview link…">
-      <button id="webLoad">Load</button>
-    </div>
-    <div class="hint"><b style="color:#e0a020">Many sites refuse to be embedded and show blank — that's the site, not this tool.</b>
-      Search engines and major sites (Google, Bing, YouTube, news/social) block it, and so does the Google Docs <b>editor</b>.
-      What works: a <b>Published to web</b> Google Doc or a <code>/preview</code> link (read-only, auto-updates as you edit in a normal tab),
-      a notes page you control, or a simple site. Interact with the producer copy below; the talent sees the same URL.</div>
-    <iframe id="webCtrl" title="producer copy"></iframe>
+    <h2>Web / Doc <span class="hctl"><select class="pos" id="webMode"></select><button class="tog2" id="webShow">SHOW</button></span></h2>
+    <div class="hint">Mirrors any browser window onto the talent monitor — a Google Doc (editor and all), notes, any site.
+      In the <b>Display</b> window click <b>Capture Window</b> and pick the browser window showing your page.
+      Then just work in that window on your own screen — your scrolling and edits appear live for the talent.
+      Toggle <b>SHOW</b> and pick Full / Top band / Bottom band here.</div>
   </div>
 
   <div class="card">
@@ -133,12 +126,13 @@
   <video id="feed" autoplay muted playsinline></video>
   <iframe id="prompter" class="hidden" allow="autoplay"></iframe>
   <iframe id="chat" class="hidden"></iframe>
-  <iframe id="web" class="hidden"></iframe>
+  <video id="web" class="hidden" autoplay muted playsinline></video>
   <div id="clock" class="layer"></div>
   <div id="timer" class="layer"></div>
   <div id="prod" class="layer"><span class="tag">PRODUCER</span><span id="prodBody"></span></div>
   <div id="bar">
     <button id="startFeed">Start Feed</button>
+    <button class="ghost" id="capWeb">Capture Window</button>
     <button class="ghost" id="fs">Fullscreen</button>
     <span class="status" id="feedStatus">no feed — click Start Feed, pick OBS projector window</span>
   </div>
@@ -182,6 +176,13 @@ if(isDisplay){
       s.getVideoTracks()[0].onended=()=>{el.feed.srcObject=null;el.status.textContent="feed stopped";};
     }catch(err){ el.status.textContent="feed cancelled"; }
   };
+  capWeb.onclick=async()=>{
+    try{
+      const s=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30},audio:false});
+      el.web.srcObject=s; render();
+      s.getVideoTracks()[0].onended=()=>{ el.web.srcObject=null; render(); };
+    }catch(err){}
+  };
   fs.onclick=()=>{ document.documentElement.requestFullscreen?.(); };
 
   /* auto-hide toolbar */
@@ -220,11 +221,8 @@ if(isDisplay){
     el.chat.classList.toggle("hidden",!showC);
     el.chat.classList.remove("left","right");
     el.chat.classList.add(state.chatSide==="left"?"left":"right");
-    // arbitrary web page (producer drives an interactive copy in Control; talent sees this)
-    const showW=state.webShow&&state.webUrl;
-    if(showW && el.web.getAttribute("data-src")!==state.webUrl){
-      el.web.src=state.webUrl; el.web.setAttribute("data-src",state.webUrl);
-    }
+    // captured browser window (producer works in the real window; talent sees the pixels live)
+    const showW=state.webShow && !!el.web.srcObject;
     el.web.classList.toggle("hidden",!showW);
     el.web.classList.remove("top","bottom");
     if(state.webMode==="top"||state.webMode==="bottom") el.web.classList.add(state.webMode);
@@ -249,7 +247,7 @@ if(isDisplay){
     promptShow:false, promptMode:"full",
     promptUrl:"https://chrisgrimm-jm.github.io/prompter/display.html?topic=adread",
     chatShow:false, chatVideo:"", chatSide:"right",
-    webShow:false, webUrl:"", webMode:"full",
+    webShow:false, webMode:"full",
     timer:{mode:"down", running:false, remaining:5*60000, endAt:0, elapsed:0, startAt:0}
   }, JSON.parse(localStorage.getItem(SAVE)||"{}"));
 
@@ -265,21 +263,12 @@ if(isDisplay){
   // hydrate text inputs
   $("prodText").value=state.prodText; $("promptUrl").value=state.promptUrl;
   $("chatVideo").value=state.chatVideo;
-  $("webUrl").value=state.webUrl; if(state.webUrl) $("webCtrl").src=state.webUrl;
 
   const bind=(id,key,ev="input",val=e=>e.target.value)=>$(id).addEventListener(ev,e=>{state[key]=val(e);send();});
   bind("prodText","prodText");
   bind("promptUrl","promptUrl");
   bind("chatVideo","chatVideo");
   $("prodClear").onclick=()=>{state.prodText="";$("prodText").value="";send();};
-  // web page: Load button drives both the producer copy and the Display (no reload-per-keystroke)
-  function loadWeb(){
-    let u=$("webUrl").value.trim();
-    if(u && !/^https?:\/\//i.test(u)) u="https://"+u;   // bare "example.com" -> absolute, else it 404s as a relative path
-    state.webUrl=u; $("webUrl").value=u; $("webCtrl").src=u||"about:blank"; send();
-  }
-  $("webLoad").onclick=loadWeb;
-  $("webUrl").addEventListener("keydown",e=>{ if(e.key==="Enter") loadWeb(); });
 
   // SHOW/HIDE toggle buttons (label = the action; green = currently shown)
   function togBtn(id,key){

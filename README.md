@@ -1,6 +1,6 @@
 # Confidence Monitor
 
-An in-studio talent confidence monitor. Shows the OBS **program feed** with local-only overlays — producer notes, a timer, a clock, an embedded teleprompter, an embedded web page, and live YouTube chat. The overlays render **only on this monitor** and never touch the OBS output, so the broadcast/vdo.ninja feed is unaffected.
+An in-studio talent confidence monitor. Shows the OBS **program feed** with local-only overlays — producer notes, a timer, a clock, an embedded teleprompter, a mirrored web page / doc, and live YouTube chat. The overlays render **only on this monitor** and never touch the OBS output, so the broadcast/vdo.ninja feed is unaffected.
 
 Single self-contained HTML file. No build, no server, no dependencies.
 
@@ -20,13 +20,11 @@ Each overlay has a **SHOW/HIDE** button and, where relevant, a position/mode dro
 - **Timer** — countdown or count-up; 9-point placement; turns red under 10s.
 - **Clock** — wall-clock time of day, top-right.
 - **Teleprompter** — embeds the [prompter](https://chrisgrimm-jm.github.io/prompter/) display (Firebase-synced). Drive scripts/play/speed from the prompter's own control page; match the `?topic=` in both URLs. Modes: Full / Top band / Bottom band.
-- **Web page** — embed any URL (a notes page, a published Google Doc, a `/preview` link). Paste a URL and hit **Load**; a live, interactive copy appears in the Control panel so the producer can scroll/click/type, and the same URL shows on the talent monitor. Modes: Full / Top band / Bottom band.
-  - Pages that block embedding won't load. The Google Docs **editor** is one of them — use **File → Share → Publish to web** or a `/preview` link (read-only, auto-updates as you edit the doc in a normal tab).
-  - Cross-origin pages can't be scroll-synced between windows, so the producer interacts with their own copy; collaborative content (a Google Doc) syncs through the page's own backend.
+- **Web / Doc** — mirrors any browser window onto the talent monitor via screen capture (same mechanism as the program feed). In the Display window click **Capture Window** and pick the browser window showing your page. The producer then works in that real window on their own screen — scrolling, clicking, editing a live Google Doc — and the talent sees the pixels in real time. Works with **any** site including the Google Docs editor (no iframe/embedding restrictions). Read-only mirror for the talent. Modes: Full / Top band / Bottom band.
 - **YouTube chat** — embeds YouTube's live chat as a Left/Right side panel. Only renders for a **currently live** video, and only when this page is hosted (not `file://`).
 
 ## How it syncs
-Control and Display run on the same machine. Control opens the Display and sends the whole state over `postMessage` on every change; the Display is a pure renderer. Control also persists to `localStorage`, so a refresh keeps your setup. The teleprompter, web page, and YouTube chat are embedded iframes that sync themselves.
+Control and Display run on the same machine. Control opens the Display and sends the whole state over `postMessage` on every change; the Display is a pure renderer. Control also persists to `localStorage`, so a refresh keeps your setup. The program feed and the Web/Doc layer are screen captures (`getDisplayMedia`) set up once in the Display; the teleprompter and YouTube chat are embedded iframes that sync themselves.
 
 ---
 Jomboy Media · hosted on GitHub Pages
