@@ -548,11 +548,20 @@ if(isDisplay){
   $("chatHlHide").onclick=()=>{ state.chatHlShow=false; send(); };
 
   // SHOW/HIDE toggle buttons (label = the action; green = currently shown)
+  const showPaint={};
   function togBtn(id,key){
     const b=$(id), paint=()=>{ b.textContent=state[key]?"HIDE":"SHOW"; b.classList.toggle("on",!!state[key]); };
     b.onclick=()=>{ state[key]=!state[key]; paint(); send(); }; paint();
+    showPaint[key]=paint;
   }
   ["prodShow","timerShow","clockShow","promptShow","chatShow"].forEach(id=>togBtn(id,id));
+  // remote (Companion) set of a show/hide flag -- key is a state property name, e.g. "promptShow"
+  function setShowRemote(key,on){
+    if(!(key in state)) return;
+    state[key]=!!on;
+    if(showPaint[key]) showPaint[key]();
+    send();
+  }
 
   // position dropdowns (id === state key)
   function fillSel(id,opts){
@@ -587,36 +596,40 @@ if(isDisplay){
     const m=parseInt($("mm").value||"0",10), s=parseInt($("ss").value||"0",10);
     state.timer.remaining=(m*60+s)*1000;
   }
-  $("tStart").onclick=()=>{
+  // factored out so Companion's remote "timer" commands can drive the same logic as the buttons
+  function timerStart(){
     const t=state.timer;
     if(t.mode==="down"){ if(!t.running){ if(!t.endAt||t.remaining<=0) setDownFromInputs();
         t.endAt=Date.now()+t.remaining; t.running=true; } }
     else { t.startAt=Date.now()-(t.elapsed||0); t.running=true; }
     send();
-  };
-  $("tPause").onclick=()=>{
+  }
+  function timerPause(){
     const t=state.timer;
     if(!t.running){send();return;}
     if(t.mode==="down") t.remaining=Math.max(0,t.endAt-Date.now());
     else t.elapsed=Date.now()-t.startAt;
     t.running=false; send();
-  };
-  $("tReset").onclick=()=>{
+  }
+  function timerReset(){
     const t=state.timer; t.running=false;
     if(t.mode==="down"){ setDownFromInputs(); t.endAt=0; }
     else t.elapsed=0;
     send();
-  };
+  }
+  $("tStart").onclick=timerStart;
+  $("tPause").onclick=timerPause;
+  $("tReset").onclick=timerReset;
   setDownFromInputs();
 
   // ---------------- TELEPROMPTER (native, ported from the standalone Prompter app) ----------------
   (function(){
     let topic = state.promptTopic || "adread";
     $("promptTopic").value = topic;
-    let settingsRef, contentRef, cmdRef, scriptsRef, triggerRef;
+    let settingsRef, contentRef, cmdRef, scriptsRef, triggerRef, uiRef;
     function refs(){
       const b = promptBase(topic);
-      settingsRef=b.child("settings"); contentRef=b.child("content"); cmdRef=b.child("cmd"); scriptsRef=b.child("scripts"); triggerRef=b.child("trigger");
+      settingsRef=b.child("settings"); contentRef=b.child("content"); cmdRef=b.child("cmd"); scriptsRef=b.child("scripts"); triggerRef=b.child("trigger"); uiRef=b.child("ui");
     }
     refs();
 
@@ -626,12 +639,27 @@ if(isDisplay){
     let st = {playing:false, speed:70, fontSize:60, lineHeight:1.4, bg:"#0b0b0b", fg:"#ffffff", margin:8, mirrorH:false, mirrorV:false, showLine:true};
     let contentVer=0, cmdN=0, lastHtml="", ready=false;
     let library=[], editingId=null, activeId=null, trimStartIdx=-1, trimEndIdx=-1, trimMode=null;
-    let libUnsub=null, triggerUnsub=null, lastTriggerN=null;
+    let libUnsub=null, triggerUnsub=null, lastTriggerN=null, uiUnsub=null;
     // declared early: bindRange()'s immediate upd() call reaches applyPreview() before later code runs
     const pv=$("ppPrevPrompt"), pf=$("ppPrevFlip"), pw=$("ppPrevWrap");
     let pvPos=0, pvLast=0, pvMaxV=0, seekPos=0, seekTimer=null;
 
-    function pushSettings(){ if(ready) settingsRef.set(st); applyPreview(); }
+    function pushSettings(){ if(ready) settingsRef.set(st); applyPreview(); autosaveLive(); }
+    // appearance/transport changes while a script is live (going live via the library's own
+    // ▶ button never puts that script into the editor, so saveScript()'s editingId-keyed save
+    // never sees these) -- mirror them straight onto the live script's own record, debounced.
+    let autosaveTimer=null;
+    function autosaveLive(){
+      if(!ready || !activeId) return;
+      clearTimeout(autosaveTimer);
+      autosaveTimer=setTimeout(()=>{
+        scriptsRef.child(activeId).update({
+          settings:{speed:st.speed, fontSize:st.fontSize, lineHeight:st.lineHeight, bg:st.bg, fg:st.fg,
+                    margin:st.margin, mirrorH:st.mirrorH, mirrorV:st.mirrorV, showLine:st.showLine},
+          seekFrac:seekPos,
+        });
+      }, 400);
+    }
     function command(t, extra){ const c=Object.assign({n:++cmdN, t}, extra||{}); cmdRef.set(c); }
 
     // rich-paste sanitizer
@@ -986,8 +1014,8 @@ if(isDisplay){
     const playBtn=$("ppPlay");
     function reflectPlay(){ playBtn.classList.toggle("paused",!st.playing); playBtn.textContent=st.playing?"⏸ Pause":"▶ Play"; }
     playBtn.onclick=()=>{ st.playing=!st.playing; reflectPlay(); pushSettings(); };
-    $("ppToTop").onclick=()=>{ command("seek",{frac:0}); seekPos=0; $("ppSeek").value=0; applyPreview(); };
-    $("ppToEnd").onclick=()=>{ command("seek",{frac:1}); seekPos=1; $("ppSeek").value=1000; applyPreview(); };
+    $("ppToTop").onclick=()=>{ command("seek",{frac:0}); seekPos=0; $("ppSeek").value=0; applyPreview(); autosaveLive(); };
+    $("ppToEnd").onclick=()=>{ command("seek",{frac:1}); seekPos=1; $("ppSeek").value=1000; applyPreview(); autosaveLive(); };
     $("ppBack").onclick=()=>{ command("nudge",{dy:-120}); nudgePreview(-120); };
     $("ppFwd").onclick=()=>{ command("nudge",{dy:120}); nudgePreview(120); };
 
@@ -1002,7 +1030,7 @@ if(isDisplay){
     bindRange("ppMg","ppMgV",x=>x+" vw",x=>{ st.margin=+x; pushSettings(); });
 
     $("ppSeek").addEventListener("input",function(){
-      seekPos=this.value/1000; applyPreview();
+      seekPos=this.value/1000; applyPreview(); autosaveLive();
       clearTimeout(seekTimer); seekTimer=setTimeout(()=>command("seek",{frac:seekPos}), 60);
     });
     document.querySelectorAll("#promptCtl [data-bg]").forEach(b=>{
@@ -1068,6 +1096,29 @@ if(isDisplay){
       triggerUnsub = ()=>triggerRef.off("value", handler);
     }
 
+    // Companion (or anything else) drives show/hide + timer transport by PATCHing:
+    //   PATCH https://pinpoint-abf21-default-rtdb.firebaseio.com/prompter/<topic>/ui.json
+    //   show a panel:  {"t":"show","key":"prodShow|timerShow|clockShow|promptShow|chatShow","on":true,"n":{".sv":"timestamp"}}
+    //   timer control: {"t":"timer","op":"start|pause|reset","n":{".sv":"timestamp"}}
+    function subscribeUiCmd(){
+      if(uiUnsub) uiUnsub();
+      let sawFirst=false, lastUiN=0;
+      const handler = snap=>{
+        const v=snap.val();
+        if(!sawFirst){ sawFirst=true; lastUiN=(v && typeof v.n==="number")?v.n:0; return; }
+        if(!v || typeof v.n!=="number" || v.n<=lastUiN) return;
+        lastUiN=v.n;
+        if(v.t==="show") setShowRemote(v.key, v.on);
+        else if(v.t==="timer"){
+          if(v.op==="start") timerStart();
+          else if(v.op==="pause") timerPause();
+          else if(v.op==="reset") timerReset();
+        }
+      };
+      uiRef.on("value", handler);
+      uiUnsub = ()=>uiRef.off("value", handler);
+    }
+
     function hydrateAndGo(){
       promptBase(topic).once("value").then(snap=>{
         const v=snap.val()||{};
@@ -1077,8 +1128,8 @@ if(isDisplay){
         syncAppearanceUI();
         reflectPlay(); newScript(); applyPreview(); renderLib(); setNowLive();
         ready=true; settingsRef.set(st);
-        subscribeLibrary(); subscribeTrigger();
-      }).catch(()=>{ ready=true; newScript(); applyPreview(); subscribeLibrary(); subscribeTrigger(); });
+        subscribeLibrary(); subscribeTrigger(); subscribeUiCmd();
+      }).catch(()=>{ ready=true; newScript(); applyPreview(); subscribeLibrary(); subscribeTrigger(); subscribeUiCmd(); });
     }
 
     function setTopic(t){

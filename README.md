@@ -39,10 +39,17 @@ In Companion, add a **Generic → HTTP Request** action per button:
 
 The name is matched case-insensitively against the Script Library. `n` must be Firebase's server-timestamp placeholder (`{".sv":"timestamp"}`), not a fixed number — otherwise pressing the same button twice in a row won't fire the second time, since the app only reacts when the value increases. A name that doesn't match anything currently in the library shows an error in the Edit-read message area rather than silently doing nothing.
 
+The same mechanism drives show/hide toggles and timer transport — same URL shape, `.../ui.json` instead of `.../trigger.json` (the Companion module's presets already wire these up, so this is only needed for the raw-HTTP approach):
+
+- Show/hide an overlay: `{"t":"show","key":"<key>","on":true,"n":{".sv":"timestamp"}}` — `key` is one of `promptShow` (teleprompter), `prodShow` (producer note), `timerShow`, `clockShow`, `chatShow` (YouTube chat).
+- Timer transport: `{"t":"timer","op":"start","n":{".sv":"timestamp"}}` — `op` is `start`, `pause`, or `reset`.
+
+Note this requires the Control page itself to be open in a browser tab — it's the one listening on Firebase and re-applying the change locally (the same way it already relays state to the Display), not something the Display or a server does on its own.
+
 ## How it syncs
 Control and Display run on the same machine. Control opens the Display and sends the whole state over `postMessage` on every change; the Display is a pure renderer. Control also persists to `localStorage`, so a refresh keeps your setup. The program feed is a screen capture (`getDisplayMedia`) set up once in the Display; YouTube chat is an embedded iframe that syncs itself.
 
-The teleprompter is the exception: script library, active content, playback settings, and transport commands all flow over **Firebase** (shared `pinpoint-abf21` project, under `prompter/{topic}`), the same as the standalone app did — Control writes, Display reads, independent of `postMessage`. Only the Topic string and the SHOW/HIDE + Full/Top/Bottom mode travel over the regular `postMessage`/`localStorage` state, since those are this app's own layout concerns.
+The teleprompter is the exception: script library, active content, playback settings, and transport commands all flow over **Firebase** (shared `pinpoint-abf21` project, under `prompter/{topic}`), the same as the standalone app did — Control writes, Display reads, independent of `postMessage`. The Topic string and the SHOW/HIDE + Full/Top/Bottom mode still travel over the regular `postMessage`/`localStorage` state between Control and its Display, since those are this app's own layout concerns — but Control also listens on Firebase (`prompter/{topic}/ui`) for remote show/hide and timer commands (from Companion or a raw HTTP request), and re-applies them locally through that same `postMessage`/`localStorage` path, exactly as if you'd clicked the button yourself.
 
 ---
 Jomboy Media · hosted on GitHub Pages
