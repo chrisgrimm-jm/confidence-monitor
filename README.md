@@ -1,8 +1,10 @@
 # Confidence Monitor
 
-An in-studio talent confidence monitor. Shows the OBS **program feed** with local-only overlays — producer notes, a timer, a clock, an embedded teleprompter, and live YouTube chat. The overlays render **only on this monitor** and never touch the OBS output, so the broadcast/vdo.ninja feed is unaffected.
+An in-studio talent confidence monitor. Shows the OBS **program feed** with local-only overlays — producer notes, a timer, a clock, a full built-in teleprompter, and live YouTube chat. The overlays render **only on this monitor** and never touch the OBS output, so the broadcast/vdo.ninja feed is unaffected.
 
-Single self-contained HTML file. No build, no server, no dependencies.
+Single self-contained HTML file. No build, no server. One dependency: Firebase (Realtime Database), used only for the teleprompter's script library — everything else is `postMessage`/`localStorage` between the two windows on this one machine.
+
+Absorbs the standalone [Prompter](https://github.com/chrisgrimm-jm/prompter) app — its script library, editor, transport, and appearance controls now live directly in this Control panel, and its scroll-and-display logic is native on this Display (no more separate prompter Control/Display windows to babysit alongside OBS and this app).
 
 ## Setup (same machine as OBS)
 1. Open the [page](https://chrisgrimm-jm.github.io/confidence-monitor/) — that's the **Control** panel.
@@ -21,11 +23,13 @@ Each overlay has a **SHOW/HIDE** button and, where relevant, a position/mode dro
 - **Producer note** — a text aside for the talent; 9-point placement (corners / edges / center); adjustable size.
 - **Timer** — countdown or count-up; 9-point placement; turns red under 10s; adjustable size.
 - **Clock** — wall-clock time of day, top-right; adjustable size.
-- **Teleprompter** — embeds the [prompter](https://chrisgrimm-jm.github.io/prompter/) display (Firebase-synced). Drive scripts/play/speed from the prompter's own control page; match the `?topic=` in both URLs. Modes: Full / Top band / Bottom band.
+- **Teleprompter** — built in. Script library (paste ad copy straight from a Google Doc — colors/highlights carry over, or link a published Doc for auto-refresh), rich-text editor with trim points, transport (play/pause/scrub/nudge), and appearance (font size, line spacing, margins, theme, mirror/flip, reading line) — all in the Control panel's Teleprompter card. Synced to the Display via Firebase under a **Topic** (default `adread`; change it to run a different session — building/editing the library ahead of time from any device still works, same as the standalone app did). Modes: Full / Top band / Bottom band.
 - **YouTube chat** — embeds YouTube's live chat as a Left/Right side panel. Only renders for a **currently live** video, and only when this page is hosted (not `file://`).
 
 ## How it syncs
-Control and Display run on the same machine. Control opens the Display and sends the whole state over `postMessage` on every change; the Display is a pure renderer. Control also persists to `localStorage`, so a refresh keeps your setup. The program feed is a screen capture (`getDisplayMedia`) set up once in the Display; the teleprompter and YouTube chat are embedded iframes that sync themselves.
+Control and Display run on the same machine. Control opens the Display and sends the whole state over `postMessage` on every change; the Display is a pure renderer. Control also persists to `localStorage`, so a refresh keeps your setup. The program feed is a screen capture (`getDisplayMedia`) set up once in the Display; YouTube chat is an embedded iframe that syncs itself.
+
+The teleprompter is the exception: script library, active content, playback settings, and transport commands all flow over **Firebase** (shared `pinpoint-abf21` project, under `prompter/{topic}`), the same as the standalone app did — Control writes, Display reads, independent of `postMessage`. Only the Topic string and the SHOW/HIDE + Full/Top/Bottom mode travel over the regular `postMessage`/`localStorage` state, since those are this app's own layout concerns.
 
 ---
 Jomboy Media · hosted on GitHub Pages

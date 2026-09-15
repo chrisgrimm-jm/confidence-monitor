@@ -31,12 +31,79 @@
   select.pos{background:#0a0e16;border:1px solid #2a3348;color:#c7cede;border-radius:6px;padding:5px 6px;font-family:"DM Mono",monospace;font-size:11px;cursor:pointer}
   .pl{display:block;font-family:"Bebas Neue",sans-serif;font-size:13px;letter-spacing:1px;color:#8892a6;margin:10px 0 4px}
 
+  /* ---------- TELEPROMPTER CONTROL (ported from the standalone Prompter app) ---------- */
+  #promptCtl{ --pp-bg:#0d1117; --pp-panel:#161b22; --pp-edge:#2a3441; --pp-accent:#4da3ff; --pp-gold:#ffd200; --pp-txt:#e6edf3; --pp-dim:#8b98a5; --pp-live:#27ae60; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  #promptCtl .wrap{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start;margin-top:10px}
+  @media(max-width:900px){ #promptCtl .wrap{grid-template-columns:1fr} }
+  #promptCtl .panel{background:var(--pp-panel);border:1px solid var(--pp-edge);border-radius:12px;padding:14px;margin-bottom:14px}
+  #promptCtl .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--pp-dim);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-family:inherit}
+  #promptCtl label{display:block;font-size:12px;color:var(--pp-dim);margin:10px 0 4px}
+  #promptCtl input[type=text],#promptCtl input[type=url]{width:100%;background:#0b0f16;border:1px solid var(--pp-edge);border-radius:8px;color:var(--pp-txt);padding:9px 10px;font-size:13px;font-family:inherit}
+  #promptCtl input[type=range]{width:100%;accent-color:var(--pp-accent)}
+  #promptCtl .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  #promptCtl .row.between{justify-content:space-between}
+  #promptCtl .val{font-variant-numeric:tabular-nums;color:var(--pp-txt);font-size:12px;min-width:46px;text-align:right}
+  #promptCtl button{font-family:inherit;font-size:13px;font-weight:700;border:1px solid var(--pp-edge);background:#1d2530;color:var(--pp-txt);border-radius:9px;padding:9px 13px;cursor:pointer;letter-spacing:0}
+  #promptCtl button:hover{border-color:var(--pp-accent)}
+  #promptCtl button.primary{background:var(--pp-accent);color:#04121f;border-color:var(--pp-accent)}
+  #promptCtl button.play{background:#27ae60;color:#04140a;border-color:#27ae60;min-width:120px;font-size:15px}
+  #promptCtl button.play.paused{background:var(--pp-gold);color:#241d00;border-color:var(--pp-gold)}
+  #promptCtl .btns{display:flex;gap:8px;flex-wrap:wrap}
+  #promptCtl #ppLibList{display:flex;flex-direction:column;gap:8px;max-height:40vh;overflow:auto}
+  #promptCtl .libItem{display:flex;align-items:center;gap:8px;background:#0b0f16;border:1px solid var(--pp-edge);border-radius:10px;padding:8px 10px}
+  #promptCtl .libItem.active{border-color:var(--pp-live);box-shadow:0 0 0 1px var(--pp-live) inset}
+  #promptCtl .libGo{flex:1;text-align:left;display:flex;align-items:center;gap:9px;background:transparent;border:none;color:var(--pp-txt);font-size:14px;padding:5px 4px;border-radius:7px}
+  #promptCtl .libGo:hover{background:#141b26;border:none}
+  #promptCtl .libGo .tri{color:var(--pp-live);font-size:15px}
+  #promptCtl .libItem.active .libGo .tri{color:var(--pp-gold)}
+  #promptCtl .libGo .nm{font-weight:800}
+  #promptCtl .libGo .wc{color:var(--pp-dim);font-size:11.5px;font-weight:500}
+  #promptCtl .liveBadge{background:var(--pp-live);color:#04140a;font-size:10px;font-weight:900;letter-spacing:.5px;padding:2px 6px;border-radius:5px}
+  #promptCtl .iconBtn{padding:6px 8px;font-size:12px;background:#1d2530}
+  #promptCtl .libEmpty{color:var(--pp-dim);font-size:13px;padding:10px 2px;line-height:1.5}
+  #promptCtl #ppEditor{min-height:220px;max-height:42vh;overflow:auto;background:#fff;color:#111;border-radius:8px;padding:16px 18px;font-size:16px;line-height:1.5}
+  #promptCtl #ppEditor:empty::before{content:'Paste your ad copy here (straight from the Google Doc — colors & highlights are kept). Or load a published Doc link below.';color:#9aa}
+  #promptCtl .swatches{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  #promptCtl .sw{width:26px;height:26px;border-radius:6px;border:1px solid #0006;cursor:pointer}
+  #promptCtl .sw.hl{border-radius:4px}
+  #promptCtl .tool{font-size:12px;padding:6px 9px}
+  #promptCtl .editing{font-size:11.5px;color:var(--pp-gold);font-weight:700}
+  #promptCtl .trimbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+  #promptCtl #ppEditor .trimOut{opacity:.3}
+  #promptCtl #ppEditor .tStart{box-shadow:inset 5px 0 0 var(--pp-live);padding-left:9px}
+  #promptCtl #ppEditor .tEnd{box-shadow:inset -5px 0 0 #e0556b;padding-right:9px}
+  #promptCtl #ppEditor .tStart.tEnd{box-shadow:inset 5px 0 0 var(--pp-live), inset -5px 0 0 #e0556b}
+  #promptCtl .pill{display:inline-flex;align-items:center;gap:6px;background:#0b0f16;border:1px solid var(--pp-edge);border-radius:20px;padding:5px 11px;font-size:12px;color:var(--pp-txt)}
+  #promptCtl #ppLink{display:inline-block;width:9px;height:9px;border-radius:50%;background:#c0392b}
+  #promptCtl #ppLink.on{background:#27ae60}
+  #promptCtl #ppNowLive{font-size:12px;color:var(--pp-dim)}
+  #promptCtl #ppNowLive b{color:var(--pp-gold)}
+  #promptCtl .toggles{display:flex;flex-direction:column;gap:8px}
+  #promptCtl .tg{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--pp-txt)}
+  #promptCtl .tg input{width:18px;height:18px;accent-color:var(--pp-accent)}
+  #promptCtl #ppPrevWrap{background:#000;border-radius:8px;overflow:hidden;height:200px;position:relative}
+  #promptCtl #ppPrevFlip{position:absolute;inset:0;transform-origin:center}
+  #promptCtl #ppPrevPrompt{padding:48% 8%;color:#fff;font-size:15px;line-height:1.4;font-weight:600;will-change:transform}
+  #promptCtl #ppPrevLine{position:absolute;left:0;right:0;top:40%;border-top:2px solid rgba(255,90,90,.5);pointer-events:none}
+  #promptCtl .note{font-size:11.5px;color:var(--pp-dim);margin-top:6px;line-height:1.4}
+  #promptCtl a{color:var(--pp-accent)}
+  #promptCtl .msg{font-size:12px;margin-top:6px;min-height:15px}
+  #promptCtl .msg.err{color:#ff8a8a}
+  #promptCtl .msg.ok{color:#8fe3b0}
+
   /* ---------- DISPLAY ---------- */
   #display{position:fixed;inset:0;background:#000;overflow:hidden}
   #feed{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
-  #prompter{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0b0b0b}
-  #prompter.top{bottom:auto;height:58%;box-shadow:0 12px 30px rgba(0,0,0,.6)}
-  #prompter.bottom{top:auto;bottom:0;height:58%;box-shadow:0 -12px 30px rgba(0,0,0,.6)}
+  #promptView{position:absolute;inset:0;overflow:hidden;background:#0b0b0b}
+  #promptView.top{bottom:auto;height:58%;box-shadow:0 12px 30px rgba(0,0,0,.6)}
+  #promptView.bottom{top:auto;bottom:0;height:58%;box-shadow:0 -12px 30px rgba(0,0,0,.6)}
+  #promptFlip{position:absolute;inset:0;transform-origin:center center}
+  #promptText{padding:45vh 8vw;font-family:'Helvetica Neue',Arial,system-ui,sans-serif;font-size:60px;line-height:1.4;font-weight:600;will-change:transform;color:#fff}
+  #promptText p,#promptText div,#promptText li,#promptText h1,#promptText h2,#promptText h3,#promptText h4{margin:0 0 .55em 0}
+  #promptText ul,#promptText ol{margin:0 0 .55em 1.3em}
+  #promptText b,#promptText strong{font-weight:900}
+  #promptLine{position:absolute;left:0;right:0;top:40%;height:0;border-top:2px solid rgba(255,90,90,.55);pointer-events:none;display:none}
+  #promptView.showline #promptLine{display:block}
   #chat{position:absolute;top:0;bottom:0;width:min(30vw,380px);border:0;background:#fff}
   #chat.left{left:0} #chat.right{right:0}
   .layer{position:absolute;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.9)}
@@ -99,15 +166,100 @@
     <div class="hint">Wall-clock time of day, top-right.</div>
   </div>
 
-  <div class="card">
-    <h2>Teleprompter <button class="tog2" id="promptShow">SHOW</button></h2>
-    <input type="text" id="promptUrl" placeholder="prompter display URL">
+  <div class="card" id="promptCtl">
+    <h2>Teleprompter <span class="hctl"><button class="tog2" id="promptShow">SHOW</button></span></h2>
     <div class="row">
       <span class="seg" id="promptModeSeg"><button data-pmode="full" class="on">Full screen</button><button data-pmode="top">Top band</button><button data-pmode="bottom">Bottom band</button></span>
     </div>
-    <div class="hint">Embeds your <a href="https://chrisgrimm-jm.github.io/prompter/control.html?topic=adread" target="_blank">prompter</a> display. Drive scripts / play / speed from its own
-      <a href="https://chrisgrimm-jm.github.io/prompter/control.html?topic=adread" target="_blank">control page</a> — this just shows or hides it on the monitor.
-      Match the <code>?topic=</code> in both URLs.</div>
+    <div class="row between" style="margin-top:10px">
+      <span class="pill">Topic <input type="text" id="promptTopic" value="adread" style="width:100px;margin-left:6px;background:transparent;border:0;color:var(--pp-gold);padding:0;font-size:12px"><span id="ppLink"></span><span id="ppLinkTxt" style="color:var(--pp-dim)">connecting…</span></span>
+      <span id="ppNowLive">Nothing on prompter yet</span>
+    </div>
+
+    <div class="wrap">
+      <div>
+        <div class="panel">
+          <h2>Script Library <button id="ppNewScript" class="tool primary">＋ New read</button></h2>
+          <div id="ppLibList"></div>
+        </div>
+
+        <div class="panel">
+          <h2><span>Edit read <span id="ppEditingLbl" class="editing"></span></span></h2>
+          <label>Name this read (e.g. “T-Mobile read”)</label>
+          <input type="text" id="ppScriptName" placeholder="T-Mobile read" autocomplete="off">
+          <label>Copy</label>
+          <div class="swatches" id="ppSwatches"></div>
+          <div id="ppEditor" contenteditable="true" spellcheck="false"></div>
+          <div class="trimbar">
+            <button id="ppTrimStartBtn" class="tool">✂ Set Start</button>
+            <button id="ppTrimEndBtn" class="tool">✂ Set End</button>
+            <button id="ppTrimClear" class="tool">Clear Trim</button>
+            <span id="ppTrimInfo" style="color:var(--pp-dim);font-size:11.5px"></span>
+          </div>
+          <div class="btns" style="margin-top:10px">
+            <button id="ppSaveScript" class="primary">💾 Save to library</button>
+            <button id="ppSaveSend">💾 Save &amp; put on prompter</button>
+            <button id="ppCancelEdit" class="tool">Clear</button>
+            <span class="msg" id="ppMsg"></span>
+          </div>
+
+          <label>…or link a published Google Doc (File ▸ Share ▸ Publish to web)</label>
+          <div class="row">
+            <input type="url" id="ppDocUrl" placeholder="https://docs.google.com/document/d/e/…/pub">
+            <button id="ppLoadDoc" class="tool">Load &amp; Link</button>
+            <button id="ppUnlinkDoc" class="tool" style="display:none">Unlink</button>
+          </div>
+          <div id="ppDocStatus" class="note"></div>
+          <div class="note">Linked docs auto-refresh every 60 s so your sales team's changes appear automatically. If Google blocks the fetch (CORS), just paste instead.</div>
+        </div>
+
+        <div class="panel">
+          <h2>Live Preview <span style="text-transform:none;font-weight:400">(approximate — the Display is authoritative)</span></h2>
+          <div id="ppPrevWrap"><div id="ppPrevFlip"><div id="ppPrevPrompt"></div></div><div id="ppPrevLine"></div></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <h2>Transport</h2>
+          <div class="row" style="justify-content:center;margin-bottom:12px">
+            <button id="ppPlay" class="play paused">▶ Play</button>
+          </div>
+          <div class="btns" style="justify-content:center">
+            <button id="ppToTop">⤒ Top</button>
+            <button id="ppBack">◂ Back</button>
+            <button id="ppFwd">Fwd ▸</button>
+            <button id="ppToEnd">End ⤓</button>
+          </div>
+          <label>Scroll speed <span class="val" id="ppSpeedV"></span></label>
+          <input type="range" id="ppSpeed" min="0" max="240" step="5" value="70">
+          <label>Scrub position</label>
+          <input type="range" id="ppSeek" min="0" max="1000" step="1" value="0">
+        </div>
+
+        <div class="panel">
+          <h2>Appearance</h2>
+          <label>Font size <span class="val" id="ppFsV"></span></label>
+          <input type="range" id="ppFs" min="24" max="140" step="2" value="60">
+          <label>Line spacing <span class="val" id="ppLhV"></span></label>
+          <input type="range" id="ppLh" min="1" max="2.4" step="0.05" value="1.4">
+          <label>Side margins <span class="val" id="ppMgV"></span></label>
+          <input type="range" id="ppMg" min="0" max="25" step="1" value="8">
+          <label>Theme</label>
+          <div class="btns">
+            <button data-bg="#0b0b0b" data-fg="#ffffff">Dark</button>
+            <button data-bg="#ffffff" data-fg="#111111">Light (match doc)</button>
+            <button data-bg="#111111" data-fg="#ffd200">Amber</button>
+          </div>
+          <div class="toggles" style="margin-top:14px">
+            <label class="tg">Mirror horizontally (teleprompter glass) <input type="checkbox" id="ppMh"></label>
+            <label class="tg">Flip vertically <input type="checkbox" id="ppMv"></label>
+            <label class="tg">Show reading line <input type="checkbox" id="ppSl" checked></label>
+          </div>
+        </div>
+        <div class="note">Rendered on the Display when Teleprompter is <b>SHOW</b>n above, in Full / Top band / Bottom band.</div>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -121,7 +273,10 @@
 <!-- ===== DISPLAY MARKUP ===== -->
 <div id="display" class="hidden">
   <video id="feed" autoplay muted playsinline></video>
-  <iframe id="prompter" class="hidden" allow="autoplay"></iframe>
+  <div id="promptView" class="hidden">
+    <div id="promptFlip"><div id="promptText"></div></div>
+    <div id="promptLine"></div>
+  </div>
   <iframe id="chat" class="hidden"></iframe>
   <div id="clock" class="layer"></div>
   <div id="timer" class="layer"></div>
@@ -133,6 +288,8 @@
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <script>
 const isDisplay = location.hash === "#display";
 document.getElementById(isDisplay ? "control" : "display").classList.add("hidden");
@@ -149,10 +306,25 @@ function fmt(ms){
   return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0");
 }
 
+/* ---- shared Firebase (Prompter's own project — the teleprompter is state-based over this) ---- */
+firebase.initializeApp({
+  apiKey: "AIzaSyBG2PS2muH4i27HefuLeBnZWW-TZ5dkMCw",
+  authDomain: "pinpoint-abf21.firebaseapp.com",
+  databaseURL: "https://pinpoint-abf21-default-rtdb.firebaseio.com",
+  projectId: "pinpoint-abf21",
+  storageBucket: "pinpoint-abf21.firebasestorage.app",
+  messagingSenderId: "947703489099",
+  appId: "1:947703489099:web:c4ed96cfbaeeda594463ce"
+});
+const _ppdb = firebase.database();
+function ppKey(t){ return String(t).trim().replace(/[.#$\[\]\/\s]+/g,"-"); }
+function promptBase(topic){ return _ppdb.ref("prompter/"+ppKey(topic||"adread")); }
+
 if(isDisplay){
   /* ---------------- DISPLAY ---------------- */
   const el={clock:clock,timer:timer,prod:prod,prodBody:prodBody,feed:feed,
-            prompter:prompter,chat:chat,bar:bar,status:feedStatus};
+            promptView:promptView,promptFlip:promptFlip,promptText:promptText,promptLine:promptLine,
+            chat:chat,bar:bar,status:feedStatus};
   // accept a watch URL, youtu.be link, /live/ link, or a bare 11-char id
   function ytId(s){
     s=(s||"").trim();
@@ -185,6 +357,64 @@ if(isDisplay){
   const PGRID=["tl","tc","tr","ml","mc","mr","bl","bc","br"];
   function setPGrid(elm,pos){ PGRID.forEach(p=>elm.classList.remove("p-"+p)); elm.classList.add("p-"+(pos||"tl")); }
 
+  /* ---- teleprompter scroll engine (ported from the standalone Prompter display) ---- */
+  const pp={ pos:0, haveContent:false, contentVer:-1, lastCmdN:null,
+    settings:{playing:false,speed:70,fontSize:60,lineHeight:1.4,bg:"#0b0b0b",fg:"#ffffff",margin:8,mirrorH:false,mirrorV:false,showLine:true},
+    topic:null, ref:null };
+  function ppMaxPos(){ return Math.max(0, el.promptText.scrollHeight - el.promptView.clientHeight); }
+  function ppClamp(){ if(pp.pos<0)pp.pos=0; const m=ppMaxPos(); if(pp.pos>m)pp.pos=m; }
+  function ppTransform(){
+    el.promptFlip.style.transform="scale("+(pp.settings.mirrorH?-1:1)+","+(pp.settings.mirrorV?-1:1)+")";
+    el.promptText.style.transform="translateY("+(-Math.round(pp.pos))+"px)";
+  }
+  function ppApplySettings(){
+    el.promptView.style.background=pp.settings.bg;
+    el.promptText.style.color=pp.settings.fg;
+    el.promptText.style.fontSize=pp.settings.fontSize+"px";
+    el.promptText.style.lineHeight=pp.settings.lineHeight;
+    el.promptText.style.paddingLeft=pp.settings.margin+"vw";
+    el.promptText.style.paddingRight=pp.settings.margin+"vw";
+    el.promptView.classList.toggle("showline", !!pp.settings.showLine);
+    ppClamp(); ppTransform();
+  }
+  function ppSetContent(html, ver){
+    if(ver!=null){ if(ver<=pp.contentVer) return; pp.contentVer=ver; }
+    el.promptText.innerHTML=html||"";
+    pp.haveContent=!!(html&&html.length);
+    pp.pos=0; ppClamp(); ppTransform();
+  }
+  function ppApplyState(v){
+    if(!v) return;
+    if(v.settings){ for(const k in v.settings) if(k in pp.settings) pp.settings[k]=v.settings[k]; ppApplySettings(); }
+    if(v.content && typeof v.content.ver==="number") ppSetContent(v.content.html||"", v.content.ver);
+    if(v.cmd && typeof v.cmd.n==="number"){
+      if(pp.lastCmdN===null){ pp.lastCmdN=v.cmd.n; }
+      else if(v.cmd.n>pp.lastCmdN){
+        pp.lastCmdN=v.cmd.n;
+        if(v.cmd.t==="seek"){ pp.pos = typeof v.cmd.frac==="number" ? v.cmd.frac*ppMaxPos() : pp.pos; ppClamp(); ppTransform(); }
+        else if(v.cmd.t==="nudge"){ pp.pos += (v.cmd.dy||0); ppClamp(); ppTransform(); }
+      }
+    }
+  }
+  function ppSubscribe(topic){
+    if(pp.topic===topic) return;
+    if(pp.ref) pp.ref.off();
+    pp.topic=topic; pp.contentVer=-1; pp.lastCmdN=null;
+    pp.ref = promptBase(topic);
+    pp.ref.on("value", snap=>ppApplyState(snap.val()));
+  }
+  let ppLastTime=0;
+  function ppAdvance(){
+    const now=(window.performance&&performance.now)?performance.now():Date.now();
+    if(pp.settings.playing && pp.haveContent){
+      if(ppLastTime){ pp.pos += pp.settings.speed*(now-ppLastTime)/1000; ppClamp(); ppTransform(); }
+      ppLastTime=now;
+    } else ppLastTime=0;
+  }
+  (function loop(){ ppAdvance(); requestAnimationFrame(loop); })();
+  setInterval(ppAdvance, 33);
+  window.addEventListener("resize",()=>{ ppClamp(); ppTransform(); });
+
   function render(){
     if(!state) return;
     // clock
@@ -199,14 +429,11 @@ if(isDisplay){
     setPGrid(el.timer, state.timerPos);
     el.timer.classList.toggle("hidden",!state.timerShow);
     el.timer.style.fontSize=(state.timerSize||64)+"px";
-    // teleprompter (embed the prompter's own display; it syncs itself via Firebase)
-    const showP=state.promptShow&&state.promptUrl;
-    if(showP && el.prompter.getAttribute("data-src")!==state.promptUrl){
-      el.prompter.src=state.promptUrl; el.prompter.setAttribute("data-src",state.promptUrl);
-    }
-    el.prompter.classList.toggle("hidden",!showP);
-    el.prompter.classList.remove("top","bottom");
-    if(state.promptMode==="top"||state.promptMode==="bottom") el.prompter.classList.add(state.promptMode);
+    // teleprompter (native scroll engine, synced via Firebase — not postMessage)
+    ppSubscribe(state.promptTopic||"adread");
+    el.promptView.classList.toggle("hidden",!state.promptShow);
+    el.promptView.classList.remove("top","bottom");
+    if(state.promptMode==="top"||state.promptMode==="bottom") el.promptView.classList.add(state.promptMode);
     // youtube live chat (embed_domain must be the host serving this page — not file://)
     const id=ytId(state.chatVideo), showC=state.chatShow&&id&&location.hostname;
     if(showC){
@@ -235,8 +462,7 @@ if(isDisplay){
     prodShow:true, prodText:"", prodPos:"tl", prodSize:18,
     timerShow:true, timerPos:"tc", timerSize:64,
     clockShow:true, clockSize:34,
-    promptShow:false, promptMode:"full",
-    promptUrl:"https://chrisgrimm-jm.github.io/prompter/display.html?topic=adread",
+    promptShow:false, promptMode:"full", promptTopic:"adread",
     chatShow:false, chatVideo:"", chatSide:"right",
     timer:{mode:"down", running:false, remaining:5*60000, endAt:0, elapsed:0, startAt:0}
   }, JSON.parse(localStorage.getItem(SAVE)||"{}"));
@@ -251,13 +477,12 @@ if(isDisplay){
 
   const $=id=>document.getElementById(id);
   // hydrate text inputs
-  $("prodText").value=state.prodText; $("promptUrl").value=state.promptUrl;
+  $("prodText").value=state.prodText;
   $("chatVideo").value=state.chatVideo;
   $("prodSize").value=state.prodSize; $("timerSize").value=state.timerSize; $("clockSize").value=state.clockSize;
 
   const bind=(id,key,ev="input",val=e=>e.target.value)=>$(id).addEventListener(ev,e=>{state[key]=val(e);send();});
   bind("prodText","prodText");
-  bind("promptUrl","promptUrl");
   bind("chatVideo","chatVideo");
   const toInt=fallback=>e=>parseInt(e.target.value,10)||fallback;
   bind("prodSize","prodSize","input",toInt(18));
@@ -325,5 +550,444 @@ if(isDisplay){
     send();
   };
   setDownFromInputs();
+
+  // ---------------- TELEPROMPTER (native, ported from the standalone Prompter app) ----------------
+  (function(){
+    let topic = state.promptTopic || "adread";
+    $("promptTopic").value = topic;
+    let settingsRef, contentRef, cmdRef, scriptsRef;
+    function refs(){
+      const b = promptBase(topic);
+      settingsRef=b.child("settings"); contentRef=b.child("content"); cmdRef=b.child("cmd"); scriptsRef=b.child("scripts");
+    }
+    refs();
+
+    function setLink(on){ $("ppLink").classList.toggle("on",on); $("ppLinkTxt").textContent = on?"live (Firebase)":"offline"; }
+    _ppdb.ref(".info/connected").on("value", s=>setLink(!!s.val()));
+
+    let st = {playing:false, speed:70, fontSize:60, lineHeight:1.4, bg:"#0b0b0b", fg:"#ffffff", margin:8, mirrorH:false, mirrorV:false, showLine:true};
+    let contentVer=0, cmdN=0, lastHtml="", ready=false;
+    let library=[], editingId=null, activeId=null, trimStartIdx=-1, trimEndIdx=-1, trimMode=null;
+    let libUnsub=null;
+    // declared early: bindRange()'s immediate upd() call reaches applyPreview() before later code runs
+    const pv=$("ppPrevPrompt"), pf=$("ppPrevFlip"), pw=$("ppPrevWrap");
+    let pvPos=0, pvLast=0, pvMaxV=0, seekPos=0, seekTimer=null;
+
+    function pushSettings(){ if(ready) settingsRef.set(st); applyPreview(); }
+    function command(t, extra){ const c=Object.assign({n:++cmdN, t}, extra||{}); cmdRef.set(c); }
+
+    // rich-paste sanitizer
+    const ALLOWED={P:1,DIV:1,BR:1,SPAN:1,B:1,STRONG:1,I:1,EM:1,U:1,S:1,STRIKE:1,H1:1,H2:1,H3:1,H4:1,UL:1,OL:1,LI:1};
+    const SKIP={STYLE:1,SCRIPT:1,LINK:1,META:1,TITLE:1,HEAD:1,SVG:1,IMG:1,TABLE:1};
+    function isDark(c){
+      if(!c) return false;
+      const m=c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+      if(m) return (+m[1]<60 && +m[2]<60 && +m[3]<60);
+      c=c.toLowerCase().replace(/\s/g,"");
+      return c==="#000"||c==="#000000"||c==="black"||c==="#111"||c==="#111111"||c==="#222"||c==="#222222";
+    }
+    function cleanStyle(el){
+      const keep=[], s=el.style;
+      if(s.color && !isDark(s.color)) keep.push("color:"+s.color);
+      if(s.backgroundColor && s.backgroundColor!=="transparent" && !/rgba?\([^)]*,\s*0\)/.test(s.backgroundColor))
+        keep.push("background-color:"+s.backgroundColor+";border-radius:4px");
+      const fw=s.fontWeight; if(fw==="bold"||(+fw>=600)) keep.push("font-weight:800");
+      if(s.fontStyle==="italic") keep.push("font-style:italic");
+      if(s.textDecorationLine && s.textDecorationLine!=="none") keep.push("text-decoration:"+s.textDecorationLine);
+      else if(s.textDecoration && /(underline|line-through)/.test(s.textDecoration)) keep.push("text-decoration:"+s.textDecoration);
+      if(/^(P|DIV|H1|H2|H3|H4|LI)$/.test(el.tagName) && s.textAlign && s.textAlign!=="start") keep.push("text-align:"+s.textAlign);
+      if(s.fontFamily) keep.push("font-family:"+s.fontFamily);
+      return keep.join(";");
+    }
+    function sanitize(node){
+      const out=document.createElement("div");
+      (function walk(src,dst){
+        src.childNodes.forEach(n=>{
+          if(n.nodeType===3){ dst.appendChild(document.createTextNode(n.nodeValue)); return; }
+          if(n.nodeType!==1) return;
+          const tag=n.tagName;
+          if(SKIP[tag]) return;
+          if(!ALLOWED[tag]){ walk(n,dst); return; }
+          const el=document.createElement(tag);
+          const style=cleanStyle(n); if(style) el.setAttribute("style",style);
+          walk(n,el);
+          dst.appendChild(el);
+        });
+      })(node,out);
+      return out.innerHTML;
+    }
+    function plainText(html){ const d=document.createElement("div"); d.innerHTML=html||""; return (d.innerText||d.textContent||"").trim(); }
+    function wordCount(html){ const t=plainText(html); return t? t.split(/\s+/).length : 0; }
+
+    const editor=$("ppEditor");
+    editor.addEventListener("paste",e=>{
+      e.preventDefault();
+      const html=(e.clipboardData||window.clipboardData).getData("text/html");
+      const text=(e.clipboardData||window.clipboardData).getData("text/plain");
+      if(html){ const tmp=document.createElement("div"); tmp.innerHTML=html; document.execCommand("insertHTML", false, sanitize(tmp)); }
+      else if(text){ document.execCommand("insertText", false, text); }
+    });
+
+    const TEXT=["#111111","#d10000","#e69100","#0a7d00","#0057d8"];
+    const HL=["#fff275","#ffb3b3","#b8f3c0","#bcdcff"];
+    const sw=$("ppSwatches");
+    TEXT.forEach(c=>{ const b=document.createElement("div"); b.className="sw"; b.style.background=c; b.title="Text colour"; b.onclick=()=>document.execCommand("foreColor",false,c); sw.appendChild(b); });
+    const gap=document.createElement("div"); gap.style.width="10px"; sw.appendChild(gap);
+    HL.forEach(c=>{ const b=document.createElement("div"); b.className="sw hl"; b.style.background=c; b.title="Highlight"; b.onclick=()=>document.execCommand("hiliteColor",false,c)||document.execCommand("backColor",false,c); sw.appendChild(b); });
+    const clrfmt=document.createElement("button"); clrfmt.className="tool"; clrfmt.textContent="Clear fmt"; clrfmt.style.marginLeft="6px"; clrfmt.onclick=()=>document.execCommand("removeFormat"); sw.appendChild(clrfmt);
+
+    function msg(t,cls){ const m=$("ppMsg"); m.textContent=t; m.className="msg "+(cls||""); if(t) setTimeout(()=>{ if(m.textContent===t){m.textContent="";m.className="msg";} },4000); }
+
+    function getBlocks(){ return Array.from(editor.children); }
+    function blockText(el){ return (el.innerText||el.textContent||"").trim(); }
+    function applyTrimVisuals(){
+      const blocks=getBlocks();
+      blocks.forEach((b,i)=>{
+        b.classList.remove("trimOut","tStart","tEnd");
+        if(trimStartIdx>=0 && i<trimStartIdx) b.classList.add("trimOut");
+        if(trimEndIdx>=0 && i>trimEndIdx) b.classList.add("trimOut");
+        if(i===trimStartIdx) b.classList.add("tStart");
+        if(i===trimEndIdx) b.classList.add("tEnd");
+      });
+      const info=$("ppTrimInfo"), parts=[];
+      if(trimStartIdx>=0) parts.push("Start: line "+(trimStartIdx+1));
+      if(trimEndIdx>=0) parts.push("End: line "+(trimEndIdx+1));
+      info.textContent=parts.join(" · ");
+    }
+    function trimAnchor(idx){
+      if(idx<0) return null;
+      const blocks=getBlocks();
+      if(idx>=blocks.length) return null;
+      return blockText(blocks[idx]).substring(0,80);
+    }
+    function anchorIdx(blocks, anchor){
+      if(!anchor) return -1;
+      for(let i=0;i<blocks.length;i++){ if(blockText(blocks[i]).substring(0,80)===anchor) return i; }
+      return -1;
+    }
+    function findAnchor(anchor){ return anchorIdx(getBlocks(), anchor); }
+    function sliceBlocks(blocks, s, e){
+      let html="";
+      for(let i=s;i<=e&&i<blocks.length;i++) html+=blocks[i].outerHTML;
+      return html;
+    }
+    function getTrimmedHtml(){
+      const blocks=getBlocks();
+      if(!blocks.length || (trimStartIdx<0 && trimEndIdx<0)) return editor.innerHTML;
+      return sliceBlocks(blocks, trimStartIdx>=0?trimStartIdx:0, trimEndIdx>=0?trimEndIdx:blocks.length-1);
+    }
+    function clearTrim(){
+      trimStartIdx=-1; trimEndIdx=-1; trimMode=null;
+      $("ppTrimStartBtn").classList.remove("primary");
+      $("ppTrimEndBtn").classList.remove("primary");
+      editor.style.cursor="";
+      applyTrimVisuals();
+    }
+    editor.addEventListener("click",e=>{
+      if(!trimMode) return;
+      let target=e.target;
+      while(target && target.parentNode!==editor) target=target.parentNode;
+      if(!target || target.parentNode!==editor) return;
+      const idx=getBlocks().indexOf(target);
+      if(idx<0) return;
+      if(trimMode==="start"){
+        trimStartIdx=idx;
+        if(trimEndIdx>=0 && trimEndIdx<trimStartIdx) trimEndIdx=-1;
+      } else {
+        trimEndIdx=idx;
+        if(trimStartIdx>=0 && trimStartIdx>trimEndIdx) trimStartIdx=-1;
+      }
+      trimMode=null;
+      $("ppTrimStartBtn").classList.remove("primary");
+      $("ppTrimEndBtn").classList.remove("primary");
+      editor.style.cursor="";
+      applyTrimVisuals();
+    });
+    $("ppTrimStartBtn").onclick=function(){
+      if(trimMode==="start"){ trimMode=null; this.classList.remove("primary"); editor.style.cursor=""; return; }
+      trimMode="start"; this.classList.add("primary"); $("ppTrimEndBtn").classList.remove("primary");
+      editor.style.cursor="crosshair";
+    };
+    $("ppTrimEndBtn").onclick=function(){
+      if(trimMode==="end"){ trimMode=null; this.classList.remove("primary"); editor.style.cursor=""; return; }
+      trimMode="end"; this.classList.add("primary"); $("ppTrimStartBtn").classList.remove("primary");
+      editor.style.cursor="crosshair";
+    };
+    $("ppTrimClear").onclick=clearTrim;
+
+    function findScript(id){ return library.find(s=>s.id===id) || null; }
+    function renderLib(){
+      const box=$("ppLibList"); box.innerHTML="";
+      if(!library.length){
+        box.innerHTML='<div class="libEmpty">No reads yet. Click <b>＋ New read</b>, paste your ad copy, name it, and save. Do this for each sponsor before the show.</div>';
+        return;
+      }
+      library.forEach(s=>{
+        const row=document.createElement("div");
+        row.className="libItem"+(s.id===activeId?" active":"");
+        const wc=wordCount(s.html);
+        const go=document.createElement("button");
+        go.className="libGo";
+        go.title="Put this read on the prompter";
+        go.innerHTML='<span class="tri">▶</span><span class="nm"></span>'
+                   + (s.id===activeId?'<span class="liveBadge">LIVE</span>':'')
+                   + (s.docUrl?'<span class="wc" title="Linked Google Doc — auto-refreshes">🔗</span>':'')
+                   + '<span class="wc">'+wc+' words</span>';
+        go.querySelector(".nm").textContent = s.name || "Untitled";
+        go.onclick=()=>goLive(s);
+        const edit=document.createElement("button"); edit.className="iconBtn"; edit.textContent="✎"; edit.title="Edit"; edit.onclick=()=>loadIntoEditor(s);
+        const del=document.createElement("button"); del.className="iconBtn"; del.textContent="🗑"; del.title="Delete";
+        del.onclick=()=>{ if(confirm('Delete "'+(s.name||"Untitled")+'"?')){ scriptsRef.child(s.id).remove(); if(editingId===s.id) newScript(); } };
+        row.appendChild(go); row.appendChild(edit); row.appendChild(del);
+        box.appendChild(row);
+      });
+    }
+    function setNowLive(){
+      const s = activeId ? findScript(activeId) : null;
+      $("ppNowLive").innerHTML = s ? ("On prompter: <b>"+(s.name||"Untitled")+"</b>")
+                                : (lastHtml ? "On prompter: <b>(unsaved read)</b>" : "Nothing on prompter yet");
+    }
+    function extractTrimmed(fullHtml, startAnchor, endAnchor){
+      if(!startAnchor && !endAnchor) return fullHtml;
+      const tmp=document.createElement("div"); tmp.innerHTML=fullHtml;
+      const blocks=Array.from(tmp.children);
+      if(!blocks.length) return fullHtml;
+      const si=anchorIdx(blocks,startAnchor), ei=anchorIdx(blocks,endAnchor);
+      if(si<0 && ei<0) return fullHtml;
+      return sliceBlocks(blocks, si>=0?si:0, ei>=0?ei:blocks.length-1);
+    }
+    function goLive(s){
+      const liveHtml = s.trimHtml || extractTrimmed(s.html||"", s.trimStart||null, s.trimEnd||null);
+      lastHtml=liveHtml; contentVer++;
+      contentRef.set({ver:contentVer, html:lastHtml, activeId:s.id||null, name:s.name||""});
+      activeId = s.id || null;
+      st.playing=false; reflectPlay(); pushSettings();
+      command("seek",{frac:0}); seekPos=0; $("ppSeek").value=0;
+      renderLib(); setNowLive(); applyPreview();
+      msg('"'+(s.name||"read")+'" is on the prompter ✓',"ok");
+    }
+    function loadIntoEditor(s){
+      editingId=s.id;
+      $("ppScriptName").value=s.name||"";
+      editor.innerHTML=s.html||"";
+      trimStartIdx = s.trimStart ? findAnchor(s.trimStart) : -1;
+      trimEndIdx = s.trimEnd ? findAnchor(s.trimEnd) : -1;
+      applyTrimVisuals();
+      $("ppDocUrl").value=s.docUrl||"";
+      reflectDocLink();
+      $("ppEditingLbl").textContent='— editing "'+(s.name||"Untitled")+'"';
+      editor.scrollIntoView({behavior:"smooth", block:"nearest"});
+    }
+    function newScript(){
+      editingId=null;
+      $("ppScriptName").value="";
+      editor.innerHTML="";
+      clearTrim();
+      $("ppDocUrl").value="";
+      reflectDocLink();
+      $("ppEditingLbl").textContent="— new read";
+    }
+    function saveScript(){
+      const name = ($("ppScriptName").value||"").trim() || "Untitled read";
+      const html = sanitize(editor);
+      if(!plainText(html)){ msg("Nothing to save — paste some copy first.","err"); return null; }
+      const data={name, html};
+      const sa=trimAnchor(trimStartIdx), ea=trimAnchor(trimEndIdx);
+      data.trimStart = sa || null; data.trimEnd = ea || null;
+      const du=($("ppDocUrl").value||"").trim();
+      data.docUrl = du||null;
+      if(editingId){ scriptsRef.child(editingId).update(data); }
+      else { data.ts=firebase.database.ServerValue.TIMESTAMP; const r=scriptsRef.push(data); editingId=r.key; }
+      $("ppEditingLbl").textContent='— editing "'+name+'"';
+      const trimHtml=getTrimmedHtml();
+      if(editingId===activeId) goLive({id:editingId, name, html, trimHtml});
+      return {id:editingId, name, html, trimHtml};
+    }
+    $("ppNewScript").onclick=newScript;
+    $("ppSaveScript").onclick=()=>{ if(saveScript()) msg("Saved to library ✓","ok"); };
+    $("ppSaveSend").onclick=()=>{ const s=saveScript(); if(s) goLive(s); };
+    $("ppCancelEdit").onclick=newScript;
+
+    // Resolve class-based styles (Google Doc exports) to inline via a hidden iframe
+    function resolveDocStyles(rawHtml, cb){
+      const iframe=document.createElement("iframe");
+      iframe.style.cssText="position:absolute;left:-9999px;width:1px;height:1px;visibility:hidden;";
+      document.body.appendChild(iframe);
+      const doc=iframe.contentDocument;
+      doc.open(); doc.write("<!DOCTYPE html><html><body>"+rawHtml+"</body></html>"); doc.close();
+      setTimeout(()=>{
+        try{
+          const all=doc.body.querySelectorAll("*");
+          for(let i=0;i<all.length;i++){
+            const el=all[i], tag=el.tagName;
+            if(SKIP[tag]) continue;
+            try{
+              const cs=iframe.contentWindow.getComputedStyle(el);
+              if(cs.color && cs.color!=="rgb(0, 0, 0)") el.style.color=cs.color;
+              if(cs.backgroundColor && cs.backgroundColor!=="rgba(0, 0, 0, 0)" && cs.backgroundColor!=="transparent")
+                el.style.backgroundColor=cs.backgroundColor;
+              if(cs.fontWeight && (+cs.fontWeight>=600 || cs.fontWeight==="bold")) el.style.fontWeight=cs.fontWeight;
+              if(cs.fontStyle==="italic") el.style.fontStyle="italic";
+              const tdl=cs.textDecorationLine||"";
+              if(tdl && tdl!=="none") el.style.textDecorationLine=tdl;
+              if(cs.textAlign && cs.textAlign!=="start" && cs.textAlign!=="left") el.style.textAlign=cs.textAlign;
+              if(cs.fontFamily) el.style.fontFamily=cs.fontFamily;
+            }catch(e){}
+          }
+        }catch(e){}
+        document.body.removeChild(iframe);
+        cb(doc.body);
+      },50);
+    }
+    function reflectDocLink(){
+      const linked=!!($("ppDocUrl").value||"").trim();
+      $("ppUnlinkDoc").style.display=linked?"":"none";
+      if(!linked) $("ppDocStatus").textContent="";
+    }
+    function fetchDoc(url, cb){
+      const tryUrls=[url], m2=url.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
+      if(m2) tryUrls.unshift("https://docs.google.com/document/d/"+m2[1]+"/export?format=html");
+      (function attempt(i){
+        if(i>=tryUrls.length){ cb(null); return; }
+        fetch(tryUrls[i]).then(r=>{ if(!r.ok) throw 0; return r.text(); })
+          .then(html=>resolveDocStyles(html, body=>cb(sanitize(body))))
+          .catch(()=>attempt(i+1));
+      })(0);
+    }
+    $("ppLoadDoc").onclick=()=>{
+      const u=$("ppDocUrl").value.trim();
+      if(!u){ msg("Paste a published Doc link first.","err"); return; }
+      msg("Fetching…");
+      fetchDoc(u, clean=>{
+        if(!clean){ msg("Google blocked the fetch (CORS). Open the Doc and paste instead.","err"); return; }
+        editor.innerHTML=clean;
+        reflectDocLink();
+        msg("Loaded & linked — auto-refreshes every 60 s. Name it and Save ✓","ok");
+        $("ppDocStatus").textContent="Linked — last fetched just now";
+      });
+    };
+    $("ppUnlinkDoc").onclick=()=>{
+      $("ppDocUrl").value="";
+      reflectDocLink();
+      msg("Doc unlinked — auto-refresh stopped.","ok");
+    };
+    // auto-refresh linked docs every 60 s
+    setInterval(()=>{
+      if(!ready) return;
+      library.forEach(s=>{
+        if(!s.docUrl) return;
+        fetchDoc(s.docUrl, clean=>{
+          if(!clean || clean===s.html) return;
+          scriptsRef.child(s.id).update({html:clean});
+          if(s.id===editingId){
+            const scrollTop=editor.scrollTop;
+            editor.innerHTML=clean;
+            editor.scrollTop=scrollTop;
+            trimStartIdx = s.trimStart ? findAnchor(s.trimStart) : -1;
+            trimEndIdx = s.trimEnd ? findAnchor(s.trimEnd) : -1;
+            applyTrimVisuals();
+            $("ppDocStatus").textContent="Linked — last refreshed "+new Date().toLocaleTimeString();
+          }
+          if(s.id===activeId){
+            const liveHtml=extractTrimmed(clean, s.trimStart, s.trimEnd);
+            lastHtml=liveHtml; contentVer++;
+            contentRef.set({ver:contentVer, html:lastHtml, activeId:s.id, name:s.name||""});
+            applyPreview();
+          }
+        });
+      });
+    }, 60000);
+
+    const playBtn=$("ppPlay");
+    function reflectPlay(){ playBtn.classList.toggle("paused",!st.playing); playBtn.textContent=st.playing?"⏸ Pause":"▶ Play"; }
+    playBtn.onclick=()=>{ st.playing=!st.playing; reflectPlay(); pushSettings(); };
+    $("ppToTop").onclick=()=>{ command("seek",{frac:0}); seekPos=0; $("ppSeek").value=0; applyPreview(); };
+    $("ppToEnd").onclick=()=>{ command("seek",{frac:1}); seekPos=1; $("ppSeek").value=1000; applyPreview(); };
+    $("ppBack").onclick=()=>{ command("nudge",{dy:-120}); nudgePreview(-120); };
+    $("ppFwd").onclick=()=>{ command("nudge",{dy:120}); nudgePreview(120); };
+
+    function bindRange(id,valId,fmt,apply){
+      const el=$(id), v=$(valId);
+      function upd(){ v.textContent=fmt(el.value); apply(el.value); }
+      el.addEventListener("input",upd); upd();
+    }
+    bindRange("ppSpeed","ppSpeedV",x=>x+" px/s",x=>{ st.speed=+x; pushSettings(); });
+    bindRange("ppFs","ppFsV",x=>x+" px",x=>{ st.fontSize=+x; pushSettings(); });
+    bindRange("ppLh","ppLhV",x=>(+x).toFixed(2),x=>{ st.lineHeight=+x; pushSettings(); });
+    bindRange("ppMg","ppMgV",x=>x+" vw",x=>{ st.margin=+x; pushSettings(); });
+
+    $("ppSeek").addEventListener("input",function(){
+      seekPos=this.value/1000; applyPreview();
+      clearTimeout(seekTimer); seekTimer=setTimeout(()=>command("seek",{frac:seekPos}), 60);
+    });
+    document.querySelectorAll("#promptCtl [data-bg]").forEach(b=>{
+      b.onclick=()=>{ st.bg=b.getAttribute("data-bg"); st.fg=b.getAttribute("data-fg"); pushSettings(); };
+    });
+    $("ppMh").onchange=function(){ st.mirrorH=this.checked; pushSettings(); };
+    $("ppMv").onchange=function(){ st.mirrorV=this.checked; pushSettings(); };
+    $("ppSl").onchange=function(){ st.showLine=this.checked; pushSettings(); };
+
+    function applyPreview(){
+      if(!pw) return;
+      pw.style.background=st.bg; pv.style.color=st.fg;
+      pv.style.fontSize=Math.max(10, st.fontSize*0.22)+"px";
+      pv.style.lineHeight=st.lineHeight;
+      pv.style.paddingLeft=st.margin+"%"; pv.style.paddingRight=st.margin+"%";
+      pf.style.transform="scale("+(st.mirrorH?-1:1)+","+(st.mirrorV?-1:1)+")";
+      $("ppPrevLine").style.display=st.showLine?"block":"none";
+      pv.innerHTML=lastHtml||'<span style="opacity:.4">— nothing on prompter —</span>';
+      pvMax(); pvPos=seekPos*pvMaxV; drawPrev();
+    }
+    function pvMax(){ pvMaxV=Math.max(0, pv.scrollHeight - pw.clientHeight); }
+    function drawPrev(){ if(pvPos<0)pvPos=0; if(pvPos>pvMaxV)pvPos=pvMaxV; pv.style.transform="translateY("+(-Math.round(pvPos))+"px)"; }
+    function nudgePreview(dy){ pvPos+=dy*0.28; drawPrev(); }
+    function pvAdvance(){
+      const now=(window.performance&&performance.now)?performance.now():Date.now();
+      if(st.playing){ if(pvLast){ pvPos += st.speed*0.28*(now-pvLast)/1000; pvMax(); drawPrev(); } pvLast=now; }
+      else pvLast=0;
+    }
+    (function loop(){ pvAdvance(); requestAnimationFrame(loop); })();
+
+    function subscribeLibrary(){
+      if(libUnsub) libUnsub();
+      const handler = snap=>{
+        const v=snap.val()||{};
+        library=Object.keys(v).map(k=>({id:k, name:v[k].name, html:v[k].html, ts:v[k].ts||0, trimStart:v[k].trimStart||null, trimEnd:v[k].trimEnd||null, docUrl:v[k].docUrl||null}));
+        library.sort((a,b)=>(a.ts||0)-(b.ts||0));
+        renderLib(); setNowLive();
+      };
+      scriptsRef.on("value", handler);
+      libUnsub = ()=>scriptsRef.off("value", handler);
+    }
+
+    function hydrateAndGo(){
+      promptBase(topic).once("value").then(snap=>{
+        const v=snap.val()||{};
+        if(v.settings) for(const k in v.settings) if(k in st) st[k]=v.settings[k];
+        if(v.content){ contentVer=v.content.ver||0; lastHtml=v.content.html||""; activeId=v.content.activeId||null; }
+        if(v.cmd && typeof v.cmd.n==="number") cmdN=v.cmd.n;
+        $("ppSpeed").value=st.speed; $("ppFs").value=st.fontSize; $("ppLh").value=st.lineHeight; $("ppMg").value=st.margin;
+        $("ppSpeedV").textContent=st.speed+" px/s"; $("ppFsV").textContent=st.fontSize+" px";
+        $("ppLhV").textContent=(+st.lineHeight).toFixed(2); $("ppMgV").textContent=st.margin+" vw";
+        $("ppMh").checked=st.mirrorH; $("ppMv").checked=st.mirrorV; $("ppSl").checked=st.showLine;
+        reflectPlay(); newScript(); applyPreview(); renderLib(); setNowLive();
+        ready=true; settingsRef.set(st);
+        subscribeLibrary();
+      }).catch(()=>{ ready=true; newScript(); applyPreview(); subscribeLibrary(); });
+    }
+
+    function setTopic(t){
+      t = (t||"").trim() || "adread";
+      if(t===topic) return;
+      topic=t; refs();
+      ready=false; library=[]; editingId=null; activeId=null; lastHtml=""; contentVer=0; cmdN=0;
+      clearTrim();
+      state.promptTopic=topic; send();
+      hydrateAndGo();
+    }
+    $("promptTopic").addEventListener("change",()=>setTopic($("promptTopic").value));
+
+    hydrateAndGo();
+  })();
 }
 </script>
