@@ -7,9 +7,11 @@
   html,body{margin:0;height:100%;background:var(--bg);color:#fff;font-family:"DM Mono",ui-monospace,monospace}
 
   /* ---------- CONTROL ---------- */
-  #control{max-width:620px;margin:0 auto;padding:20px 18px 60px}
+  /* fixed 1920x1080 studio monitor, not a responsive page: two columns instead of one cramped centered one */
+  #control{max-width:1880px;margin:0 auto;padding:20px 24px 40px}
   #control h1{font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:1px;margin:0 0 2px;color:#fff}
   #control .sub{color:#8892a6;font-size:12px;margin-bottom:18px}
+  .ctl2col{display:grid;grid-template-columns:1fr 440px;gap:20px;align-items:start}
   .card{background:#11151f;border:1px solid #232a3a;border-radius:10px;padding:14px 14px 16px;margin:12px 0}
   .card h2{font-family:"Bebas Neue",sans-serif;font-size:18px;letter-spacing:1px;margin:0 0 10px;color:var(--blue);display:flex;justify-content:space-between;align-items:center}
   label.tog{font-size:12px;color:#c7cede;font-family:"DM Mono",monospace;display:flex;gap:6px;align-items:center;cursor:pointer}
@@ -128,44 +130,8 @@
   <h1>Confidence Monitor · Control</h1>
   <div class="sub">In-studio talent monitor. Overlays show only here — never on the program feed.</div>
 
-  <button class="big" id="openDisplay">Open Talent Display →</button>
-  <div class="hint">Opens a second window. In that window click <b>Capture Feed</b> and pick your OBS
-    <b>Windowed Projector (Program)</b>. Drag it to the talent's screen and press <b>Fullscreen</b>.</div>
-
-  <div class="card">
-    <h2>Producer Note <span class="hctl"><select class="pos" id="prodPos"></select><button class="tog2" id="prodShow">HIDE</button></span></h2>
-    <input type="text" id="prodText" placeholder="Private aside to talent…">
-    <div class="row">
-      <button class="ghost" id="prodClear">Clear</button>
-      <span style="font-size:11px;color:#8892a6">Size</span><input class="time-in" type="number" id="prodSize" min="10" max="72">
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Timer <span class="hctl"><select class="pos" id="timerPos"></select><button class="tog2" id="timerShow">HIDE</button></span></h2>
-    <div class="row">
-      <span class="seg" id="timerMode"><button data-mode="down" class="on">Countdown</button><button data-mode="up">Count up</button></span>
-    </div>
-    <div class="row" id="downInputs">
-      <input class="time-in" type="text" id="mm" value="05">:<input class="time-in" type="text" id="ss" value="00">
-      <span style="font-size:11px;color:#8892a6">min : sec</span>
-    </div>
-    <div class="row">
-      <button id="tStart">Start</button>
-      <button class="ghost" id="tPause">Pause</button>
-      <button class="ghost" id="tReset">Reset</button>
-      <span style="font-size:11px;color:#8892a6">Size</span><input class="time-in" type="number" id="timerSize" min="20" max="160">
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Clock <button class="tog2" id="clockShow">HIDE</button></h2>
-    <div class="row">
-      <span style="font-size:11px;color:#8892a6">Size</span><input class="time-in" type="number" id="clockSize" min="14" max="80">
-    </div>
-    <div class="hint">Wall-clock time of day, top-right.</div>
-  </div>
-
+  <div class="ctl2col">
+  <div class="colLeft">
   <div class="card" id="promptCtl">
     <h2>Teleprompter <span class="hctl"><button class="tog2" id="promptShow">SHOW</button></span></h2>
     <div class="row">
@@ -261,12 +227,54 @@
       </div>
     </div>
   </div>
+  </div>
+
+  <div class="colRight">
+  <button class="big" id="openDisplay">Open Talent Display →</button>
+  <div class="hint">Opens a second window. In that window click <b>Capture Feed</b> and pick your OBS
+    <b>Windowed Projector (Program)</b>. Drag it to the talent's screen and press <b>Fullscreen</b>.</div>
+
+  <div class="card">
+    <h2>Producer Note <span class="hctl"><select class="pos" id="prodPos"></select><button class="tog2" id="prodShow">HIDE</button></span></h2>
+    <input type="text" id="prodText" placeholder="Private aside to talent…">
+    <div class="row">
+      <button class="ghost" id="prodClear">Clear</button>
+      <span style="font-size:11px;color:#8892a6">Size</span><input class="time-in" type="number" id="prodSize" min="10" max="72">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Timer <span class="hctl"><select class="pos" id="timerPos"></select><button class="tog2" id="timerShow">HIDE</button></span></h2>
+    <div class="row">
+      <span class="seg" id="timerMode"><button data-mode="down" class="on">Countdown</button><button data-mode="up">Count up</button></span>
+    </div>
+    <div class="row" id="downInputs">
+      <input class="time-in" type="text" id="mm" value="05">:<input class="time-in" type="text" id="ss" value="00">
+      <span style="font-size:11px;color:#8892a6">min : sec</span>
+    </div>
+    <div class="row">
+      <button id="tStart">Start</button>
+      <button class="ghost" id="tPause">Pause</button>
+      <button class="ghost" id="tReset">Reset</button>
+      <span style="font-size:11px;color:#8892a6">Size</span><input class="time-in" type="number" id="timerSize" min="20" max="160">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Clock <button class="tog2" id="clockShow">HIDE</button></h2>
+    <div class="row">
+      <span style="font-size:11px;color:#8892a6">Size</span><input class="time-in" type="number" id="clockSize" min="14" max="80">
+    </div>
+    <div class="hint">Wall-clock time of day, top-right.</div>
+  </div>
 
   <div class="card">
     <h2>YouTube Chat <span class="hctl"><select class="pos" id="chatSide"></select><button class="tog2" id="chatShow">SHOW</button></span></h2>
     <input type="text" id="chatVideo" placeholder="live video URL or ID (e.g. dQw4w9WgXcQ)">
     <div class="hint">Live chat only appears for a video that's <b>currently live</b>. Requires this page to be
       hosted (GitHub Pages) — YouTube won't embed chat from a local <code>file://</code>.</div>
+  </div>
+  </div>
   </div>
 </div>
 
