@@ -1101,6 +1101,7 @@ if(isDisplay){
     // Companion (or anything else) drives show/hide + timer transport by PATCHing:
     //   PATCH https://pinpoint-abf21-default-rtdb.firebaseio.com/prompter/<topic>/ui.json
     //   show a panel:  {"t":"show","key":"prodShow|timerShow|clockShow|promptShow|chatShow","on":true,"n":{".sv":"timestamp"}}
+    //   toggle a panel: {"t":"toggle","key":"<same keys as above>","n":{".sv":"timestamp"}}
     //   timer control: {"t":"timer","op":"start|pause|reset","n":{".sv":"timestamp"}}
     function subscribeUiCmd(){
       if(uiUnsub) uiUnsub();
@@ -1111,6 +1112,7 @@ if(isDisplay){
         if(!v || typeof v.n!=="number" || v.n<=lastUiN) return;
         lastUiN=v.n;
         if(v.t==="show") setShowRemote(v.key, v.on);
+        else if(v.t==="toggle") setShowRemote(v.key, !state[v.key]);
         else if(v.t==="timer"){
           if(v.op==="start") timerStart();
           else if(v.op==="pause") timerPause();

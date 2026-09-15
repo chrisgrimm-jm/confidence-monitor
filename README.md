@@ -42,6 +42,7 @@ The name is matched case-insensitively against the Script Library. `n` must be F
 The same mechanism drives show/hide toggles and timer transport — same URL shape, `.../ui.json` instead of `.../trigger.json` (the Companion module's presets already wire these up, so this is only needed for the raw-HTTP approach):
 
 - Show/hide an overlay: `{"t":"show","key":"<key>","on":true,"n":{".sv":"timestamp"}}` — `key` is one of `promptShow` (teleprompter), `prodShow` (producer note), `timerShow`, `clockShow`, `chatShow` (YouTube chat).
+- Toggle an overlay: `{"t":"toggle","key":"<key>","n":{".sv":"timestamp"}}` — flips whatever it's currently set to, same `key` values as above.
 - Timer transport: `{"t":"timer","op":"start","n":{".sv":"timestamp"}}` — `op` is `start`, `pause`, or `reset`.
 
 Note this requires the Control page itself to be open in a browser tab — it's the one listening on Firebase and re-applying the change locally (the same way it already relays state to the Display), not something the Display or a server does on its own.
