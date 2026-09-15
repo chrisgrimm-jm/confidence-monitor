@@ -23,8 +23,19 @@ Each overlay has a **SHOW/HIDE** button and, where relevant, a position/mode dro
 - **Producer note** — a text aside for the talent; 9-point placement (corners / edges / center); adjustable size.
 - **Timer** — countdown or count-up; 9-point placement; turns red under 10s; adjustable size.
 - **Clock** — wall-clock time of day, top-right; adjustable size.
-- **Teleprompter** — built in. Script library (paste ad copy straight from a Google Doc — colors/highlights carry over, or link a published Doc for auto-refresh), rich-text editor with trim points, transport (play/pause/scrub/nudge), and appearance (font size, line spacing, margins, theme, mirror/flip, reading line) — all in the Control panel's Teleprompter card. Synced to the Display via Firebase under a **Topic** (default `adread`; change it to run a different session — building/editing the library ahead of time from any device still works, same as the standalone app did). Modes: Full / Top band / Bottom band.
+- **Teleprompter** — built in. Script library (paste ad copy straight from a Google Doc — colors/highlights carry over, or link a published Doc for auto-refresh), rich-text editor with trim points, transport (play/pause/scrub/nudge), and appearance (font size, line spacing, margins, theme, mirror/flip, reading line) — all in the Control panel's Teleprompter card. Synced to the Display via Firebase under a **Topic** (default `adread`; change it to run a different session — building/editing the library ahead of time from any device still works, same as the standalone app did). Modes: Full / Top band / Bottom band. Can be triggered externally — see **Companion / hardware triggers** below.
 - **YouTube chat** — embeds YouTube's live chat as a Left/Right side panel. Only renders for a **currently live** video, and only when this page is hosted (not `file://`).
+
+## Companion / hardware triggers
+A read can be put live from outside the browser — a Bitfocus Companion button, a Stream Deck, anything that can fire an HTTP request — by writing directly to the same Firebase Realtime Database the app already uses (open/unauthenticated, same as every other read/write this app does; no server of its own to run).
+
+In Companion, add a **Generic → HTTP Request** action per button:
+- Method: `PATCH`
+- URL: `https://pinpoint-abf21-default-rtdb.firebaseio.com/prompter/<topic>/trigger.json` (use the Topic shown in the Teleprompter card, `adread` by default)
+- Header: `Content-Type: application/json`
+- Body: `{"name":"<exact read name>","n":{".sv":"timestamp"}}`
+
+The name is matched case-insensitively against the Script Library. `n` must be Firebase's server-timestamp placeholder (`{".sv":"timestamp"}`), not a fixed number — otherwise pressing the same button twice in a row won't fire the second time, since the app only reacts when the value increases. A name that doesn't match anything currently in the library shows an error in the Edit-read message area rather than silently doing nothing.
 
 ## How it syncs
 Control and Display run on the same machine. Control opens the Display and sends the whole state over `postMessage` on every change; the Display is a pure renderer. Control also persists to `localStorage`, so a refresh keeps your setup. The program feed is a screen capture (`getDisplayMedia`) set up once in the Display; YouTube chat is an embedded iframe that syncs itself.

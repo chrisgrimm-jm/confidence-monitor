@@ -563,10 +563,10 @@ if(isDisplay){
   (function(){
     let topic = state.promptTopic || "adread";
     $("promptTopic").value = topic;
-    let settingsRef, contentRef, cmdRef, scriptsRef;
+    let settingsRef, contentRef, cmdRef, scriptsRef, triggerRef;
     function refs(){
       const b = promptBase(topic);
-      settingsRef=b.child("settings"); contentRef=b.child("content"); cmdRef=b.child("cmd"); scriptsRef=b.child("scripts");
+      settingsRef=b.child("settings"); contentRef=b.child("content"); cmdRef=b.child("cmd"); scriptsRef=b.child("scripts"); triggerRef=b.child("trigger");
     }
     refs();
 
@@ -576,7 +576,7 @@ if(isDisplay){
     let st = {playing:false, speed:70, fontSize:60, lineHeight:1.4, bg:"#0b0b0b", fg:"#ffffff", margin:8, mirrorH:false, mirrorV:false, showLine:true};
     let contentVer=0, cmdN=0, lastHtml="", ready=false;
     let library=[], editingId=null, activeId=null, trimStartIdx=-1, trimEndIdx=-1, trimMode=null;
-    let libUnsub=null;
+    let libUnsub=null, triggerUnsub=null, lastTriggerN=null;
     // declared early: bindRange()'s immediate upd() call reaches applyPreview() before later code runs
     const pv=$("ppPrevPrompt"), pf=$("ppPrevFlip"), pw=$("ppPrevWrap");
     let pvPos=0, pvLast=0, pvMaxV=0, seekPos=0, seekTimer=null;
@@ -980,6 +980,28 @@ if(isDisplay){
       libUnsub = ()=>scriptsRef.off("value", handler);
     }
 
+    // Companion (or anything else) triggers a read by PATCHing this Firebase path directly:
+    //   PATCH https://pinpoint-abf21-default-rtdb.firebaseio.com/prompter/<topic>/trigger.json
+    //   body: {"name":"<exact read name>","n":{".sv":"timestamp"}}
+    // matched case-insensitively against the library; n must strictly increase, so use a server
+    // timestamp rather than a fixed value or repeat-presses of the same button won't re-fire.
+    function subscribeTrigger(){
+      if(triggerUnsub) triggerUnsub();
+      const handler = snap=>{
+        const v=snap.val();
+        if(!v || typeof v.n!=="number") return;
+        if(lastTriggerN===null){ lastTriggerN=v.n; return; }  // baseline on first snapshot; don't replay a stale trigger
+        if(v.n<=lastTriggerN) return;
+        lastTriggerN=v.n;
+        const name=(v.name||"").trim().toLowerCase();
+        const s=library.find(x=>(x.name||"").trim().toLowerCase()===name);
+        if(s) goLive(s);
+        else msg('Companion trigger: no read named "'+(v.name||"")+'"',"err");
+      };
+      triggerRef.on("value", handler);
+      triggerUnsub = ()=>triggerRef.off("value", handler);
+    }
+
     function hydrateAndGo(){
       promptBase(topic).once("value").then(snap=>{
         const v=snap.val()||{};
@@ -992,15 +1014,15 @@ if(isDisplay){
         $("ppMh").checked=st.mirrorH; $("ppMv").checked=st.mirrorV; $("ppSl").checked=st.showLine;
         reflectPlay(); newScript(); applyPreview(); renderLib(); setNowLive();
         ready=true; settingsRef.set(st);
-        subscribeLibrary();
-      }).catch(()=>{ ready=true; newScript(); applyPreview(); subscribeLibrary(); });
+        subscribeLibrary(); subscribeTrigger();
+      }).catch(()=>{ ready=true; newScript(); applyPreview(); subscribeLibrary(); subscribeTrigger(); });
     }
 
     function setTopic(t){
       t = (t||"").trim() || "adread";
       if(t===topic) return;
       topic=t; refs();
-      ready=false; library=[]; editingId=null; activeId=null; lastHtml=""; contentVer=0; cmdN=0;
+      ready=false; library=[]; editingId=null; activeId=null; lastHtml=""; contentVer=0; cmdN=0; lastTriggerN=null;
       clearTrim();
       state.promptTopic=topic; send();
       hydrateAndGo();
