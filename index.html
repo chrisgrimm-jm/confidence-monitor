@@ -94,9 +94,14 @@
   #promptCtl .msg.ok{color:#8fe3b0}
 
   /* ---------- DISPLAY ---------- */
+  /* stacking order (lowest to highest): program feed < YouTube chat < teleprompter < info badges < control bar.
+     explicit z-index because these overlays don't otherwise follow DOM order in a stable way. */
   #display{position:fixed;inset:0;background:#000;overflow:hidden}
-  #feed{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
-  #promptView{position:absolute;inset:0;overflow:hidden;background:#0b0b0b}
+  #feed{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:1}
+  #chat{position:absolute;top:0;height:100%;width:min(30vw,380px);border:0;background:#fff;z-index:2}
+  #chat.left{left:0} #chat.right{right:0}
+  #chat.full{left:0;right:0;width:100%}
+  #promptView{position:absolute;inset:0;overflow:hidden;background:#0b0b0b;z-index:3}
   #promptView.top{bottom:auto;height:58%;box-shadow:0 12px 30px rgba(0,0,0,.6)}
   #promptView.bottom{top:auto;bottom:0;height:58%;box-shadow:0 -12px 30px rgba(0,0,0,.6)}
   #promptFlip{position:absolute;inset:0;transform-origin:center center}
@@ -106,10 +111,7 @@
   #promptText b,#promptText strong{font-weight:900}
   #promptLine{position:absolute;left:0;right:0;top:40%;height:0;border-top:2px solid rgba(255,90,90,.55);pointer-events:none;display:none}
   #promptView.showline #promptLine{display:block}
-  #chat{position:absolute;top:0;height:100%;width:min(30vw,380px);border:0;background:#fff}
-  #chat.left{left:0} #chat.right{right:0}
-  #chat.full{left:0;right:0;width:100%}
-  .layer{position:absolute;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.9)}
+  .layer{position:absolute;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.9);z-index:4}
   /* shared 9-point placement (producer note + timer) */
   .p-tl{top:16px;left:18px} .p-tc{top:12px;left:50%;transform:translateX(-50%)} .p-tr{top:16px;right:18px}
   .p-ml{top:50%;left:18px;transform:translateY(-50%)} .p-mc{top:50%;left:50%;transform:translate(-50%,-50%)} .p-mr{top:50%;right:18px;transform:translateY(-50%)}
@@ -124,7 +126,7 @@
   #chatHl .nm{font-weight:700;color:var(--blue);margin-right:6px}
   .hidden{display:none!important}
   #bar{position:absolute;bottom:0;left:0;right:0;display:flex;gap:8px;padding:8px;background:rgba(0,0,0,.6);
-    transition:opacity .3s;font-family:"DM Mono",monospace;font-size:12px;align-items:center}
+    transition:opacity .3s;font-family:"DM Mono",monospace;font-size:12px;align-items:center;z-index:5}
   #bar.idle{opacity:0}
   #bar .status{color:#8892a6;margin-left:auto}
 </style>
