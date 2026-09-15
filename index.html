@@ -98,7 +98,7 @@
      explicit z-index because these overlays don't otherwise follow DOM order in a stable way. */
   #display{position:fixed;inset:0;background:#000;overflow:hidden}
   #feed{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:1}
-  #chat{position:absolute;top:0;height:100%;width:min(30vw,380px);border:0;background:#fff;z-index:2}
+  #chat{position:absolute;top:0;height:100%;width:min(30vw,380px);border:0;background:#0f0f0f;z-index:2}
   #chat.left{left:0} #chat.right{right:0}
   #chat.full{left:0;right:0;width:100%}
   #promptView{position:absolute;inset:0;overflow:hidden;background:#0b0b0b;z-index:3}
@@ -280,7 +280,7 @@
     <div class="hint">Live chat only appears for a video that's <b>currently live</b>. Requires this page to be
       hosted (GitHub Pages) — YouTube won't embed chat from a local <code>file://</code>.</div>
 
-    <iframe id="ctlChat" style="width:100%;height:320px;border:0;border-radius:8px;background:#fff;margin-top:10px"></iframe>
+    <iframe id="ctlChat" style="width:100%;height:320px;border:0;border-radius:8px;background:#0f0f0f;margin-top:10px"></iframe>
 
     <label class="pl">Highlight for talent</label>
     <div class="hint" style="margin-top:0">Scroll the chat above to find a missed message (a super chat, say), copy it in below, and send it to the talent's screen.</div>
@@ -467,7 +467,7 @@ if(isDisplay){
     // youtube live chat (embed_domain must be the host serving this page — not file://)
     const id=ytId(state.chatVideo), showC=state.chatShow&&id&&location.hostname;
     if(showC){
-      const src="https://www.youtube.com/live_chat?v="+id+"&embed_domain="+location.hostname;
+      const src="https://www.youtube.com/live_chat?v="+id+"&embed_domain="+location.hostname+"&dark_theme=1";
       if(el.chat.getAttribute("data-src")!==src){ el.chat.src=src; el.chat.setAttribute("data-src",src); }
     }
     el.chat.classList.toggle("hidden",!showC);
@@ -536,7 +536,7 @@ if(isDisplay){
   // independently to find something they missed (the Display's copy is a separate iframe/instance)
   function updateCtlChat(){
     const id=ytId(state.chatVideo);
-    const src=id?"https://www.youtube.com/live_chat?v="+id+"&embed_domain="+location.hostname:"";
+    const src=id?"https://www.youtube.com/live_chat?v="+id+"&embed_domain="+location.hostname+"&dark_theme=1":"";
     if($("ctlChat").getAttribute("data-src")!==src){ $("ctlChat").src=src; $("ctlChat").setAttribute("data-src",src); }
   }
   updateCtlChat();
