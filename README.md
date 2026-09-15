@@ -39,11 +39,16 @@ In Companion, add a **Generic → HTTP Request** action per button:
 
 The name is matched case-insensitively against the Script Library. `n` must be Firebase's server-timestamp placeholder (`{".sv":"timestamp"}`), not a fixed number — otherwise pressing the same button twice in a row won't fire the second time, since the app only reacts when the value increases. A name that doesn't match anything currently in the library shows an error in the Edit-read message area rather than silently doing nothing.
 
-The same mechanism drives show/hide toggles and timer transport — same URL shape, `.../ui.json` instead of `.../trigger.json` (the Companion module's presets already wire these up, so this is only needed for the raw-HTTP approach):
+Show/hide toggles and timer transport go through a separate queue (the Companion module's presets already wire these up, so this is only needed for the raw-HTTP approach). Unlike the trigger endpoint above, this one is a real queue — each command is a **new child**, not an overwrite of one value — so that two commands for different elements landing close together (e.g. show the teleprompter, then hide the chat, a moment apart) both take effect instead of the later one silently winning:
 
-- Show/hide an overlay: `{"t":"show","key":"<key>","on":true,"n":{".sv":"timestamp"}}` — `key` is one of `promptShow` (teleprompter), `prodShow` (producer note), `timerShow`, `clockShow`, `chatShow` (YouTube chat).
-- Toggle an overlay: `{"t":"toggle","key":"<key>","n":{".sv":"timestamp"}}` — flips whatever it's currently set to, same `key` values as above.
-- Timer transport: `{"t":"timer","op":"start","n":{".sv":"timestamp"}}` — `op` is `start`, `pause`, or `reset`.
+- Method: `POST` (creates a new child — a plain `PATCH`/`PUT` to a fixed URL would go back to the one-value-wins-the-race problem this is built to avoid)
+- URL: `https://pinpoint-abf21-default-rtdb.firebaseio.com/prompter/<topic>/uiq.json`
+- Header: `Content-Type: application/json`
+- Show/hide an overlay: `{"t":"show","key":"<key>","on":true}` — `key` is one of `promptShow` (teleprompter), `prodShow` (producer note), `timerShow`, `clockShow`, `chatShow` (YouTube chat).
+- Toggle an overlay: `{"t":"toggle","key":"<key>"}` — flips whatever it's currently set to, same `key` values as above.
+- Timer transport: `{"t":"timer","op":"start"}` — `op` is `start`, `pause`, or `reset`.
+
+Confidence Monitor applies each queued command and deletes it immediately, so the queue stays effectively empty in normal operation — there's nothing to clean up.
 
 Note this requires the Control page itself to be open in a browser tab — it's the one listening on Firebase and re-applying the change locally (the same way it already relays state to the Display), not something the Display or a server does on its own.
 

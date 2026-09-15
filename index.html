@@ -628,10 +628,10 @@ if(isDisplay){
   (function(){
     let topic = state.promptTopic || "adread";
     $("promptTopic").value = topic;
-    let settingsRef, contentRef, cmdRef, scriptsRef, triggerRef, uiRef;
+    let settingsRef, contentRef, cmdRef, scriptsRef, triggerRef, uiqRef;
     function refs(){
       const b = promptBase(topic);
-      settingsRef=b.child("settings"); contentRef=b.child("content"); cmdRef=b.child("cmd"); scriptsRef=b.child("scripts"); triggerRef=b.child("trigger"); uiRef=b.child("ui");
+      settingsRef=b.child("settings"); contentRef=b.child("content"); cmdRef=b.child("cmd"); scriptsRef=b.child("scripts"); triggerRef=b.child("trigger"); uiqRef=b.child("uiq");
     }
     refs();
 
@@ -1098,19 +1098,21 @@ if(isDisplay){
       triggerUnsub = ()=>triggerRef.off("value", handler);
     }
 
-    // Companion (or anything else) drives show/hide + timer transport by PATCHing:
-    //   PATCH https://pinpoint-abf21-default-rtdb.firebaseio.com/prompter/<topic>/ui.json
-    //   show a panel:  {"t":"show","key":"prodShow|timerShow|clockShow|promptShow|chatShow","on":true,"n":{".sv":"timestamp"}}
-    //   toggle a panel: {"t":"toggle","key":"<same keys as above>","n":{".sv":"timestamp"}}
-    //   timer control: {"t":"timer","op":"start|pause|reset","n":{".sv":"timestamp"}}
+    // Companion (or anything else) drives show/hide + timer transport by pushing a new child under:
+    //   POST https://pinpoint-abf21-default-rtdb.firebaseio.com/prompter/<topic>/uiq.json
+    //   show a panel:  {"t":"show","key":"prodShow|timerShow|clockShow|promptShow|chatShow","on":true}
+    //   toggle a panel: {"t":"toggle","key":"<same keys as above>"}
+    //   timer control: {"t":"timer","op":"start|pause|reset"}
+    // A real queue (push() + child_added, each command removed once applied) rather than a single
+    // mutable value -- two commands landing close together (e.g. show X then hide Y from two
+    // different buttons) used to collapse into "whichever wrote last wins", silently dropping the
+    // other, since a plain value listener only reports the current value, not each intermediate one.
     function subscribeUiCmd(){
       if(uiUnsub) uiUnsub();
-      let sawFirst=false, lastUiN=0;
       const handler = snap=>{
         const v=snap.val();
-        if(!sawFirst){ sawFirst=true; lastUiN=(v && typeof v.n==="number")?v.n:0; return; }
-        if(!v || typeof v.n!=="number" || v.n<=lastUiN) return;
-        lastUiN=v.n;
+        snap.ref.remove();
+        if(!v) return;
         if(v.t==="show") setShowRemote(v.key, v.on);
         else if(v.t==="toggle") setShowRemote(v.key, !state[v.key]);
         else if(v.t==="timer"){
@@ -1119,8 +1121,8 @@ if(isDisplay){
           else if(v.op==="reset") timerReset();
         }
       };
-      uiRef.on("value", handler);
-      uiUnsub = ()=>uiRef.off("value", handler);
+      uiqRef.on("child_added", handler);
+      uiUnsub = ()=>uiqRef.off("child_added", handler);
     }
 
     function hydrateAndGo(){
