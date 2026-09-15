@@ -125,9 +125,6 @@
   #timer.warn{color:var(--red)}
   #prod{max-width:42vw;background:rgba(6,10,20,.72);border-left:4px solid var(--red);border-radius:6px;padding:8px 12px;font-size:18px;line-height:1.35}
   #prod .tag{font-family:"Bebas Neue",sans-serif;color:var(--red);font-size:14px;letter-spacing:2px;display:block}
-  #chatHl{max-width:42vw;background:rgba(6,10,20,.72);border-left:4px solid var(--blue);border-radius:6px;padding:8px 12px;font-size:18px;line-height:1.35}
-  #chatHl .tag{font-family:"Bebas Neue",sans-serif;color:var(--blue);font-size:14px;letter-spacing:2px;display:block}
-  #chatHl .nm{font-weight:700;color:var(--blue);margin-right:6px}
   .hidden{display:none!important}
   #bar{position:absolute;bottom:0;left:0;right:0;display:flex;gap:8px;padding:8px;background:rgba(0,0,0,.6);
     transition:opacity .3s;font-family:"DM Mono",monospace;font-size:12px;align-items:center;z-index:5}
@@ -288,18 +285,10 @@
       <input class="time-in" type="number" id="chatSize" min="50" max="250" step="10">%
     </div>
 
-    <iframe id="ctlChat" style="width:100%;height:320px;border:0;border-radius:8px;background:#0f0f0f;margin-top:10px"></iframe>
-
-    <label class="pl">Highlight for talent</label>
-    <div class="hint" style="margin-top:0">Scroll the chat above to find a missed message (a super chat, say), copy it in below, and send it to the talent's screen.</div>
-    <input type="text" id="chatHlName" placeholder="Commenter name (optional)">
-    <input type="text" id="chatHlText" placeholder="Paste or type the message…" style="margin-top:8px">
     <div class="row">
-      <button id="chatHlSend">Send to Talent</button>
-      <button class="ghost" id="chatHlHide">Hide</button>
-      <select class="pos" id="chatHlPos"></select>
-      <span style="font-size:11px;color:#8892a6">Size</span><input class="time-in" type="number" id="chatHlSize" min="12" max="60">
+      <button id="chatPopout">Pop out chat ↗</button>
     </div>
+    <iframe id="ctlChat" style="width:100%;height:320px;border:0;border-radius:8px;background:#0f0f0f;margin-top:10px"></iframe>
   </div>
   </div>
   </div>
@@ -316,7 +305,6 @@
   <div id="clock" class="layer"></div>
   <div id="timer" class="layer"></div>
   <div id="prod" class="layer"><span class="tag">PRODUCER</span><span id="prodBody"></span></div>
-  <div id="chatHl" class="layer"><span class="tag">CHAT</span><span class="nm" id="chatHlNm"></span><span id="chatHlBody"></span></div>
   <div id="bar">
     <button id="capFeed">Capture Feed</button>
     <button class="ghost" id="fs">Fullscreen</button>
@@ -368,7 +356,7 @@ if(isDisplay){
   /* ---------------- DISPLAY ---------------- */
   const el={clock:clock,timer:timer,prod:prod,prodBody:prodBody,feed:feed,
             promptView:promptView,promptFlip:promptFlip,promptText:promptText,promptLine:promptLine,
-            chat:chat,chatHl:chatHl,chatHlNm:chatHlNm,chatHlBody:chatHlBody,bar:bar,status:feedStatus};
+            chat:chat,bar:bar,status:feedStatus};
   let state=null;
 
   window.addEventListener("message",e=>{ if(e.data&&e.data.type==="state"){ state=e.data.state; render(); }});
@@ -482,12 +470,6 @@ if(isDisplay){
     el.chat.classList.remove("left","right","full");
     el.chat.classList.add(state.chatSide==="full"?"full":state.chatSide==="left"?"left":"right");
     el.chat.style.setProperty("--chat-zoom",(state.chatSize||100)/100);
-    // chat highlight (a specific message the producer pulled out and pushed to the talent)
-    setPGrid(el.chatHl, state.chatHlPos);
-    el.chatHl.classList.toggle("hidden",!(state.chatHlShow&&state.chatHlText));
-    el.chatHlNm.textContent=state.chatHlName?state.chatHlName+":":"";
-    el.chatHlBody.textContent=state.chatHlText||"";
-    el.chatHl.style.fontSize=(state.chatHlSize||18)+"px";
   }
   // 4x/sec tick for clock + running timer
   setInterval(()=>{
@@ -509,7 +491,6 @@ if(isDisplay){
     clockShow:true, clockSize:34,
     promptShow:false, promptMode:"full", promptTopic:"adread",
     chatShow:false, chatVideo:"", chatSide:"right", chatSize:100,
-    chatHlShow:false, chatHlPos:"bl", chatHlName:"", chatHlText:"", chatHlSize:18,
     timer:{mode:"down", running:false, remaining:5*60000, endAt:0, elapsed:0, startAt:0}
   }, JSON.parse(localStorage.getItem(SAVE)||"{}"));
 
@@ -525,22 +506,17 @@ if(isDisplay){
   // hydrate text inputs
   $("prodText").value=state.prodText;
   $("chatVideo").value=state.chatVideo;
-  $("chatHlName").value=state.chatHlName; $("chatHlText").value=state.chatHlText;
   $("prodSize").value=state.prodSize; $("timerSize").value=state.timerSize; $("clockSize").value=state.clockSize;
-  $("chatHlSize").value=state.chatHlSize;
   $("chatSize").value=state.chatSize;
 
   const bind=(id,key,ev="input",val=e=>e.target.value)=>$(id).addEventListener(ev,e=>{state[key]=val(e);send();});
   bind("prodText","prodText");
   bind("chatVideo","chatVideo");
-  bind("chatHlName","chatHlName");
-  bind("chatHlText","chatHlText");
   const toInt=fallback=>e=>parseInt(e.target.value,10)||fallback;
   bind("prodSize","prodSize","input",toInt(18));
   bind("timerSize","timerSize","input",toInt(64));
   bind("clockSize","clockSize","input",toInt(34));
   bind("chatSize","chatSize","input",toInt(100));
-  bind("chatHlSize","chatHlSize","input",toInt(18));
   $("prodClear").onclick=()=>{state.prodText="";$("prodText").value="";send();};
 
   // YouTube chat: same live_chat embed as the Display, so the producer can scroll their own copy
@@ -553,12 +529,13 @@ if(isDisplay){
   updateCtlChat();
   $("chatVideo").addEventListener("input",updateCtlChat);
 
-  $("chatHlSend").onclick=()=>{
-    state.chatHlName=$("chatHlName").value; state.chatHlText=$("chatHlText").value;
-    if(!state.chatHlText.trim()) return;
-    state.chatHlShow=true; send();
+  // real pop-out window (YouTube's own "is_popout" chat UI) -- fully interactive/scrollable,
+  // and its own window the producer can move/resize/keep on top instead of the cramped embed above
+  $("chatPopout").onclick=()=>{
+    const id=ytId(state.chatVideo);
+    if(!id){ alert("Enter a live video URL or ID first."); return; }
+    window.open("https://www.youtube.com/live_chat?v="+id+"&is_popout=1","cm_chat_popout","width=420,height=720,noopener");
   };
-  $("chatHlHide").onclick=()=>{ state.chatHlShow=false; send(); };
 
   // SHOW/HIDE toggle buttons (label = the action; green = currently shown)
   const showPaint={};
@@ -587,7 +564,6 @@ if(isDisplay){
   fillSel("prodPos",P9);
   fillSel("timerPos",P9);
   fillSel("chatSide",[["left","Left"],["right","Right"],["full","Full screen"]]);
-  fillSel("chatHlPos",P9);
 
   // teleprompter band mode (scoped seg)
   document.querySelectorAll("#promptModeSeg button").forEach(b=>b.onclick=()=>{
