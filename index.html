@@ -453,7 +453,10 @@ if(isDisplay){
   }, JSON.parse(localStorage.getItem(SAVE)||"{}"));
 
   let disp=null;
-  function send(){ localStorage.setItem(SAVE,JSON.stringify(state)); disp?.postMessage({type:"state",state},"*"); }
+  // real implementation attached below once the teleprompter block sets up its Firebase refs --
+  // mirrors the show/hide flags (only) out to Firebase so Companion's feedback can read them back
+  let pushUiState=()=>{};
+  function send(){ localStorage.setItem(SAVE,JSON.stringify(state)); disp?.postMessage({type:"state",state},"*"); pushUiState(); }
   window.addEventListener("message",e=>{ if(e.data&&e.data.type==="ready") send(); });
 
   openDisplay.onclick=()=>{
@@ -550,12 +553,15 @@ if(isDisplay){
   (function(){
     let topic = state.promptTopic || "adread";
     $("promptTopic").value = topic;
-    let settingsRef, contentRef, cmdRef, scriptsRef, triggerRef, uiqRef;
+    let settingsRef, contentRef, cmdRef, scriptsRef, triggerRef, uiqRef, uiStateRef;
     function refs(){
       const b = promptBase(topic);
-      settingsRef=b.child("settings"); contentRef=b.child("content"); cmdRef=b.child("cmd"); scriptsRef=b.child("scripts"); triggerRef=b.child("trigger"); uiqRef=b.child("uiq");
+      settingsRef=b.child("settings"); contentRef=b.child("content"); cmdRef=b.child("cmd"); scriptsRef=b.child("scripts"); triggerRef=b.child("trigger"); uiqRef=b.child("uiq"); uiStateRef=b.child("uistate");
     }
     refs();
+    // read-only mirror of the show/hide flags Companion's feedback checks -- only these four,
+    // not the whole state object (producer note text is meant to stay local/private to the talent).
+    pushUiState = ()=> uiStateRef.set({promptShow:!!state.promptShow, prodShow:!!state.prodShow, timerShow:!!state.timerShow, clockShow:!!state.clockShow});
 
     function setLink(on){ $("ppLink").classList.toggle("on",on); $("ppLinkTxt").textContent = on?"live (Firebase)":"offline"; }
     _ppdb.ref(".info/connected").on("value", s=>setLink(!!s.val()));
@@ -1056,8 +1062,8 @@ if(isDisplay){
         syncAppearanceUI();
         reflectPlay(); newScript(); applyPreview(); renderLib(); setNowLive();
         ready=true; settingsRef.set(st);
-        subscribeLibrary(); subscribeTrigger(); subscribeUiCmd();
-      }).catch(()=>{ ready=true; newScript(); applyPreview(); subscribeLibrary(); subscribeTrigger(); subscribeUiCmd(); });
+        subscribeLibrary(); subscribeTrigger(); subscribeUiCmd(); pushUiState();
+      }).catch(()=>{ ready=true; newScript(); applyPreview(); subscribeLibrary(); subscribeTrigger(); subscribeUiCmd(); pushUiState(); });
     }
 
     function setTopic(t){

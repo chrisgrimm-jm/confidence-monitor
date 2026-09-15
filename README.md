@@ -51,6 +51,8 @@ Confidence Monitor applies each queued command and deletes it immediately, so th
 
 Note this requires the Control page itself to be open in a browser tab — it's the one listening on Firebase and re-applying the change locally (the same way it already relays state to the Display), not something the Display or a server does on its own.
 
+Control also mirrors those four show/hide flags **out** to `prompter/<topic>/uistate` (`{"promptShow":bool,"prodShow":bool,"timerShow":bool,"clockShow":bool}`) every time any of them changes, from any source (a button click in Control, or one of the commands above) — this is what lets Companion's "element is shown" feedback color a button correctly. Nothing else about the app's state is mirrored there.
+
 ## How it syncs
 Control and Display run on the same machine. Control opens the Display and sends the whole state over `postMessage` on every change; the Display is a pure renderer. Control also persists to `localStorage`, so a refresh keeps your setup. The program feed is a screen capture (`getDisplayMedia`) set up once in the Display.
 
