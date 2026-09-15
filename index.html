@@ -106,8 +106,9 @@
   #promptText b,#promptText strong{font-weight:900}
   #promptLine{position:absolute;left:0;right:0;top:40%;height:0;border-top:2px solid rgba(255,90,90,.55);pointer-events:none;display:none}
   #promptView.showline #promptLine{display:block}
-  #chat{position:absolute;top:0;bottom:0;width:min(30vw,380px);border:0;background:#fff}
+  #chat{position:absolute;top:0;height:100%;width:min(30vw,380px);border:0;background:#fff}
   #chat.left{left:0} #chat.right{right:0}
+  #chat.full{left:0;right:0;width:100%}
   .layer{position:absolute;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.9)}
   /* shared 9-point placement (producer note + timer) */
   .p-tl{top:16px;left:18px} .p-tc{top:12px;left:50%;transform:translateX(-50%)} .p-tr{top:16px;right:18px}
@@ -468,8 +469,8 @@ if(isDisplay){
       if(el.chat.getAttribute("data-src")!==src){ el.chat.src=src; el.chat.setAttribute("data-src",src); }
     }
     el.chat.classList.toggle("hidden",!showC);
-    el.chat.classList.remove("left","right");
-    el.chat.classList.add(state.chatSide==="left"?"left":"right");
+    el.chat.classList.remove("left","right","full");
+    el.chat.classList.add(state.chatSide==="full"?"full":state.chatSide==="left"?"left":"right");
     // chat highlight (a specific message the producer pulled out and pushed to the talent)
     setPGrid(el.chatHl, state.chatHlPos);
     el.chatHl.classList.toggle("hidden",!(state.chatHlShow&&state.chatHlText));
@@ -563,7 +564,7 @@ if(isDisplay){
   const P9=[["tl","Top left"],["tc","Top center"],["tr","Top right"],["ml","Mid left"],["mc","Center"],["mr","Mid right"],["bl","Bottom left"],["bc","Bottom center"],["br","Bottom right"]];
   fillSel("prodPos",P9);
   fillSel("timerPos",P9);
-  fillSel("chatSide",[["left","Left"],["right","Right"]]);
+  fillSel("chatSide",[["left","Left"],["right","Right"],["full","Full screen"]]);
   fillSel("chatHlPos",P9);
 
   // teleprompter band mode (scoped seg)
@@ -825,13 +826,22 @@ if(isDisplay){
       if(si<0 && ei<0) return fullHtml;
       return sliceBlocks(blocks, si>=0?si:0, ei>=0?ei:blocks.length-1);
     }
+    // reflect st's appearance/transport values onto the sliders/checkboxes (used on hydrate and on goLive)
+    function syncAppearanceUI(){
+      $("ppSpeed").value=st.speed; $("ppFs").value=st.fontSize; $("ppLh").value=st.lineHeight; $("ppMg").value=st.margin;
+      $("ppSpeedV").textContent=st.speed+" px/s"; $("ppFsV").textContent=st.fontSize+" px";
+      $("ppLhV").textContent=(+st.lineHeight).toFixed(2); $("ppMgV").textContent=st.margin+" vw";
+      $("ppMh").checked=st.mirrorH; $("ppMv").checked=st.mirrorV; $("ppSl").checked=st.showLine;
+    }
     function goLive(s){
       const liveHtml = s.trimHtml || extractTrimmed(s.html||"", s.trimStart||null, s.trimEnd||null);
       lastHtml=liveHtml; contentVer++;
       contentRef.set({ver:contentVer, html:lastHtml, activeId:s.id||null, name:s.name||""});
       activeId = s.id || null;
-      st.playing=false; reflectPlay(); pushSettings();
-      command("seek",{frac:0}); seekPos=0; $("ppSeek").value=0;
+      if(s.settings) for(const k in s.settings) if(k in st) st[k]=s.settings[k];
+      st.playing=false; reflectPlay(); syncAppearanceUI(); pushSettings();
+      const frac = typeof s.seekFrac==="number" ? s.seekFrac : 0;
+      command("seek",{frac}); seekPos=frac; $("ppSeek").value=Math.round(frac*1000);
       renderLib(); setNowLive(); applyPreview();
       msg('"'+(s.name||"read")+'" is on the prompter ✓',"ok");
     }
@@ -865,12 +875,18 @@ if(isDisplay){
       data.trimStart = sa || null; data.trimEnd = ea || null;
       const du=($("ppDocUrl").value||"").trim();
       data.docUrl = du||null;
+      // snapshot every appearance/transport setting with the script, so each read gets its own
+      // scroll speed, font size, line spacing, margins, theme, mirror/flip, reading line, and
+      // scrub position, restored whenever that read goes live (see goLive())
+      data.settings = {speed:st.speed, fontSize:st.fontSize, lineHeight:st.lineHeight, bg:st.bg, fg:st.fg,
+                        margin:st.margin, mirrorH:st.mirrorH, mirrorV:st.mirrorV, showLine:st.showLine};
+      data.seekFrac = seekPos;
       if(editingId){ scriptsRef.child(editingId).update(data); }
       else { data.ts=firebase.database.ServerValue.TIMESTAMP; const r=scriptsRef.push(data); editingId=r.key; }
       $("ppEditingLbl").textContent='— editing "'+name+'"';
       const trimHtml=getTrimmedHtml();
-      if(editingId===activeId) goLive({id:editingId, name, html, trimHtml});
-      return {id:editingId, name, html, trimHtml};
+      if(editingId===activeId) goLive({id:editingId, name, html, trimHtml, settings:data.settings, seekFrac:data.seekFrac});
+      return {id:editingId, name, html, trimHtml, settings:data.settings, seekFrac:data.seekFrac};
     }
     $("ppNewScript").onclick=newScript;
     $("ppSaveScript").onclick=()=>{ if(saveScript()) msg("Saved to library ✓","ok"); };
@@ -1021,7 +1037,7 @@ if(isDisplay){
       if(libUnsub) libUnsub();
       const handler = snap=>{
         const v=snap.val()||{};
-        library=Object.keys(v).map(k=>({id:k, name:v[k].name, html:v[k].html, ts:v[k].ts||0, trimStart:v[k].trimStart||null, trimEnd:v[k].trimEnd||null, docUrl:v[k].docUrl||null}));
+        library=Object.keys(v).map(k=>({id:k, name:v[k].name, html:v[k].html, ts:v[k].ts||0, trimStart:v[k].trimStart||null, trimEnd:v[k].trimEnd||null, docUrl:v[k].docUrl||null, settings:v[k].settings||null, seekFrac:typeof v[k].seekFrac==="number"?v[k].seekFrac:null}));
         library.sort((a,b)=>(a.ts||0)-(b.ts||0));
         renderLib(); setNowLive();
       };
@@ -1057,10 +1073,7 @@ if(isDisplay){
         if(v.settings) for(const k in v.settings) if(k in st) st[k]=v.settings[k];
         if(v.content){ contentVer=v.content.ver||0; lastHtml=v.content.html||""; activeId=v.content.activeId||null; }
         if(v.cmd && typeof v.cmd.n==="number") cmdN=v.cmd.n;
-        $("ppSpeed").value=st.speed; $("ppFs").value=st.fontSize; $("ppLh").value=st.lineHeight; $("ppMg").value=st.margin;
-        $("ppSpeedV").textContent=st.speed+" px/s"; $("ppFsV").textContent=st.fontSize+" px";
-        $("ppLhV").textContent=(+st.lineHeight).toFixed(2); $("ppMgV").textContent=st.margin+" vw";
-        $("ppMh").checked=st.mirrorH; $("ppMv").checked=st.mirrorV; $("ppSl").checked=st.showLine;
+        syncAppearanceUI();
         reflectPlay(); newScript(); applyPreview(); renderLib(); setNowLive();
         ready=true; settingsRef.set(st);
         subscribeLibrary(); subscribeTrigger();
