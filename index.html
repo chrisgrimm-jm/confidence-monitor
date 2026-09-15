@@ -13,6 +13,8 @@
   #control .sub{color:#8892a6;font-size:12px;margin-bottom:18px}
   .ctl2col{display:grid;grid-template-columns:1fr 440px;gap:20px;align-items:start}
   .card{background:#11151f;border:1px solid #232a3a;border-radius:10px;padding:14px 14px 16px;margin:12px 0}
+  /* same shrink-then-scale trick as the Display's #chat -- see its comment below */
+  #ctlChat{position:absolute;top:0;left:0;border:0;height:calc(100% / var(--chat-zoom,1));width:calc(100% / var(--chat-zoom,1));transform:scale(var(--chat-zoom,1));transform-origin:top left}
   .card h2{font-family:"Bebas Neue",sans-serif;font-size:18px;letter-spacing:1px;margin:0 0 10px;color:var(--blue);display:flex;justify-content:space-between;align-items:center}
   label.tog{font-size:12px;color:#c7cede;font-family:"DM Mono",monospace;display:flex;gap:6px;align-items:center;cursor:pointer}
   textarea,input[type=text]{width:100%;background:#0a0e16;border:1px solid #2a3348;color:#fff;border-radius:8px;padding:10px;font-family:"DM Mono",monospace;font-size:14px}
@@ -281,14 +283,16 @@
     <div class="hint">Live chat only appears for a video that's <b>currently live</b>. Requires this page to be
       hosted (GitHub Pages) — YouTube won't embed chat from a local <code>file://</code>.</div>
     <div class="row">
-      <span style="font-size:11px;color:#8892a6">Zoom (Display only — it's a YouTube embed, we can't set its font size directly)</span>
+      <span style="font-size:11px;color:#8892a6">Zoom (it's a YouTube embed, so this scales the whole thing rather than a font size)</span>
       <input class="time-in" type="number" id="chatSize" min="50" max="250" step="10">%
     </div>
 
     <div class="row">
       <button id="chatPopout">Pop out chat ↗</button>
     </div>
-    <iframe id="ctlChat" style="width:100%;height:320px;border:0;border-radius:8px;background:#0f0f0f;margin-top:10px"></iframe>
+    <div id="ctlChatBox" style="position:relative;width:100%;height:320px;border-radius:8px;overflow:hidden;margin-top:10px;background:#0f0f0f">
+      <iframe id="ctlChat"></iframe>
+    </div>
   </div>
   </div>
   </div>
@@ -526,8 +530,11 @@ if(isDisplay){
     const src=id?"https://www.youtube.com/live_chat?v="+id+"&embed_domain="+location.hostname+"&dark_theme=1":"";
     if($("ctlChat").getAttribute("data-src")!==src){ $("ctlChat").src=src; $("ctlChat").setAttribute("data-src",src); }
   }
+  function applyCtlChatZoom(){ $("ctlChat").style.setProperty("--chat-zoom",(state.chatSize||100)/100); }
   updateCtlChat();
+  applyCtlChatZoom();
   $("chatVideo").addEventListener("input",updateCtlChat);
+  $("chatSize").addEventListener("input",applyCtlChatZoom);
 
   // real pop-out window (YouTube's own "is_popout" chat UI) -- fully interactive/scrollable,
   // and its own window the producer can move/resize/keep on top instead of the cramped embed above
