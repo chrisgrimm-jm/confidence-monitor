@@ -1,6 +1,6 @@
 # Confidence Monitor
 
-An in-studio talent confidence monitor. Shows the OBS **program feed** with local-only overlays — producer notes, a timer, a clock, a full built-in teleprompter, and live YouTube chat. The overlays render **only on this monitor** and never touch the OBS output, so the broadcast/vdo.ninja feed is unaffected.
+An in-studio talent confidence monitor. Shows the OBS **program feed** with local-only overlays — producer notes, a timer, a clock, and a full built-in teleprompter. The overlays render **only on this monitor** and never touch the OBS output, so the broadcast/vdo.ninja feed is unaffected.
 
 Single self-contained HTML file. No build, no server. One dependency: Firebase (Realtime Database), used only for the teleprompter's script library — everything else is `postMessage`/`localStorage` between the two windows on this one machine.
 
@@ -24,7 +24,6 @@ Each overlay has a **SHOW/HIDE** button and, where relevant, a position/mode dro
 - **Timer** — countdown or count-up; 9-point placement; turns red under 10s; adjustable size.
 - **Clock** — wall-clock time of day, top-right; adjustable size.
 - **Teleprompter** — built in. Script library (paste ad copy straight from a Google Doc — colors/highlights carry over, or link a published Doc for auto-refresh), rich-text editor with trim points, transport (play/pause/scrub/nudge), and appearance (font size, line spacing, margins, theme, mirror/flip, reading line) — all in the Control panel's Teleprompter card. Synced to the Display via Firebase under a **Topic** (default `adread`; change it to run a different session — building/editing the library ahead of time from any device still works, same as the standalone app did). Modes: Full / Top band / Bottom band. Can be triggered externally — see **Companion / hardware triggers** below. Every appearance/transport setting — scroll speed, font size, line spacing, margins, theme, mirror/flip, reading line, and even scrub position — is saved **per read**, not globally: whatever the sliders show when you hit **Save to library** is what that read restores when it next goes live, so each sponsor read can have its own pacing/look.
-- **YouTube chat** — embeds YouTube's live chat as a Left/Right/**Full screen** panel on the Display (mode dropdown in the card header), with a **Zoom** field to scale its text size up or down on both the Display panel and Control's own copy (it's a cross-origin embed, so this scales the whole rendering rather than a font-size property — each panel's own footprint on screen stays put). Only renders for a **currently live** video, and only when this page is hosted (not `file://`). Control embeds its own separate copy of the same chat so the producer can scroll back through it independently of what's showing on the Display, plus a **Pop out chat ↗** button that opens YouTube's own real pop-out chat window — fully interactive and scrollable, resizable/movable like any window, better for actually reading along than the small embedded copy.
 
 ## Companion / hardware triggers
 A read can be put live from outside the browser — a Bitfocus Companion button, a Stream Deck, anything that can fire an HTTP request — by writing directly to the same Firebase Realtime Database the app already uses (open/unauthenticated, same as every other read/write this app does; no server of its own to run).
@@ -39,12 +38,12 @@ In Companion, add a **Generic → HTTP Request** action per button:
 
 The name is matched case-insensitively against the Script Library. `n` must be Firebase's server-timestamp placeholder (`{".sv":"timestamp"}`), not a fixed number — otherwise pressing the same button twice in a row won't fire the second time, since the app only reacts when the value increases. A name that doesn't match anything currently in the library shows an error in the Edit-read message area rather than silently doing nothing.
 
-Show/hide toggles and timer transport go through a separate queue (the Companion module's presets already wire these up, so this is only needed for the raw-HTTP approach). Unlike the trigger endpoint above, this one is a real queue — each command is a **new child**, not an overwrite of one value — so that two commands for different elements landing close together (e.g. show the teleprompter, then hide the chat, a moment apart) both take effect instead of the later one silently winning:
+Show/hide toggles and timer transport go through a separate queue (the Companion module's presets already wire these up, so this is only needed for the raw-HTTP approach). Unlike the trigger endpoint above, this one is a real queue — each command is a **new child**, not an overwrite of one value — so that two commands for different elements landing close together (e.g. show the teleprompter, then hide the timer, a moment apart) both take effect instead of the later one silently winning:
 
 - Method: `POST` (creates a new child — a plain `PATCH`/`PUT` to a fixed URL would go back to the one-value-wins-the-race problem this is built to avoid)
 - URL: `https://pinpoint-abf21-default-rtdb.firebaseio.com/prompter/<topic>/uiq.json`
 - Header: `Content-Type: application/json`
-- Show/hide an overlay: `{"t":"show","key":"<key>","on":true}` — `key` is one of `promptShow` (teleprompter), `prodShow` (producer note), `timerShow`, `clockShow`, `chatShow` (YouTube chat).
+- Show/hide an overlay: `{"t":"show","key":"<key>","on":true}` — `key` is one of `promptShow` (teleprompter), `prodShow` (producer note), `timerShow`, `clockShow`.
 - Toggle an overlay: `{"t":"toggle","key":"<key>"}` — flips whatever it's currently set to, same `key` values as above.
 - Timer transport: `{"t":"timer","op":"start"}` — `op` is `start`, `pause`, or `reset`.
 
@@ -53,7 +52,7 @@ Confidence Monitor applies each queued command and deletes it immediately, so th
 Note this requires the Control page itself to be open in a browser tab — it's the one listening on Firebase and re-applying the change locally (the same way it already relays state to the Display), not something the Display or a server does on its own.
 
 ## How it syncs
-Control and Display run on the same machine. Control opens the Display and sends the whole state over `postMessage` on every change; the Display is a pure renderer. Control also persists to `localStorage`, so a refresh keeps your setup. The program feed is a screen capture (`getDisplayMedia`) set up once in the Display; YouTube chat is an embedded iframe that syncs itself.
+Control and Display run on the same machine. Control opens the Display and sends the whole state over `postMessage` on every change; the Display is a pure renderer. Control also persists to `localStorage`, so a refresh keeps your setup. The program feed is a screen capture (`getDisplayMedia`) set up once in the Display.
 
 The teleprompter is the exception: script library, active content, playback settings, and transport commands all flow over **Firebase** (shared `pinpoint-abf21` project, under `prompter/{topic}`), the same as the standalone app did — Control writes, Display reads, independent of `postMessage`. The Topic string and the SHOW/HIDE + Full/Top/Bottom mode still travel over the regular `postMessage`/`localStorage` state between Control and its Display, since those are this app's own layout concerns — but Control also listens on Firebase (`prompter/{topic}/ui`) for remote show/hide and timer commands (from Companion or a raw HTTP request), and re-applies them locally through that same `postMessage`/`localStorage` path, exactly as if you'd clicked the button yourself.
 

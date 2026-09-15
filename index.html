@@ -13,8 +13,6 @@
   #control .sub{color:#8892a6;font-size:12px;margin-bottom:18px}
   .ctl2col{display:grid;grid-template-columns:1fr 440px;gap:20px;align-items:start}
   .card{background:#11151f;border:1px solid #232a3a;border-radius:10px;padding:14px 14px 16px;margin:12px 0}
-  /* same shrink-then-scale trick as the Display's #chat -- see its comment below */
-  #ctlChat{position:absolute;top:0;left:0;border:0;height:calc(100% / var(--chat-zoom,1));width:calc(100% / var(--chat-zoom,1));transform:scale(var(--chat-zoom,1));transform-origin:top left}
   .card h2{font-family:"Bebas Neue",sans-serif;font-size:18px;letter-spacing:1px;margin:0 0 10px;color:var(--blue);display:flex;justify-content:space-between;align-items:center}
   label.tog{font-size:12px;color:#c7cede;font-family:"DM Mono",monospace;display:flex;gap:6px;align-items:center;cursor:pointer}
   textarea,input[type=text]{width:100%;background:#0a0e16;border:1px solid #2a3348;color:#fff;border-radius:8px;padding:10px;font-family:"DM Mono",monospace;font-size:14px}
@@ -96,17 +94,10 @@
   #promptCtl .msg.ok{color:#8fe3b0}
 
   /* ---------- DISPLAY ---------- */
-  /* stacking order (lowest to highest): program feed < YouTube chat < teleprompter < info badges < control bar.
+  /* stacking order (lowest to highest): program feed < teleprompter < info badges < control bar.
      explicit z-index because these overlays don't otherwise follow DOM order in a stable way. */
   #display{position:fixed;inset:0;background:#000;overflow:hidden}
   #feed{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:1}
-  /* --chat-zoom scales the embed's own rendering up (YouTube's chat text can't be resized directly,
-     it's a cross-origin iframe) while the element's own footprint stays the same size: shrink the box
-     by the same factor first, then transform:scale it back up so it paints at full size again. */
-  #chat{position:absolute;top:0;height:calc(100% / var(--chat-zoom,1));width:calc(min(30vw,380px) / var(--chat-zoom,1));border:0;background:#0f0f0f;z-index:2;transform:scale(var(--chat-zoom,1));transform-origin:top left}
-  #chat.left{left:0}
-  #chat.right{right:0;transform-origin:top right}
-  #chat.full{left:0;right:0;width:calc(100% / var(--chat-zoom,1))}
   #promptView{position:absolute;inset:0;overflow:hidden;background:#0b0b0b;z-index:3}
   #promptView.top{bottom:auto;height:58%;box-shadow:0 12px 30px rgba(0,0,0,.6)}
   #promptView.bottom{top:auto;bottom:0;height:58%;box-shadow:0 -12px 30px rgba(0,0,0,.6)}
@@ -277,23 +268,6 @@
     <div class="hint">Wall-clock time of day, top-right.</div>
   </div>
 
-  <div class="card">
-    <h2>YouTube Chat <span class="hctl"><select class="pos" id="chatSide"></select><button class="tog2" id="chatShow">SHOW</button></span></h2>
-    <input type="text" id="chatVideo" placeholder="live video URL or ID (e.g. dQw4w9WgXcQ)">
-    <div class="hint">Live chat only appears for a video that's <b>currently live</b>. Requires this page to be
-      hosted (GitHub Pages) — YouTube won't embed chat from a local <code>file://</code>.</div>
-    <div class="row">
-      <span style="font-size:11px;color:#8892a6">Zoom (it's a YouTube embed, so this scales the whole thing rather than a font size)</span>
-      <input class="time-in" type="number" id="chatSize" min="50" max="250" step="10">%
-    </div>
-
-    <div class="row">
-      <button id="chatPopout">Pop out chat ↗</button>
-    </div>
-    <div id="ctlChatBox" style="position:relative;width:100%;height:320px;border-radius:8px;overflow:hidden;margin-top:10px;background:#0f0f0f">
-      <iframe id="ctlChat"></iframe>
-    </div>
-  </div>
   </div>
   </div>
 </div>
@@ -305,7 +279,6 @@
     <div id="promptFlip"><div id="promptText"></div></div>
     <div id="promptLine"></div>
   </div>
-  <iframe id="chat" class="hidden"></iframe>
   <div id="clock" class="layer"></div>
   <div id="timer" class="layer"></div>
   <div id="prod" class="layer"><span class="tag">PRODUCER</span><span id="prodBody"></span></div>
@@ -348,19 +321,11 @@ const _ppdb = firebase.database();
 function ppKey(t){ return String(t).trim().replace(/[.#$\[\]\/\s]+/g,"-"); }
 function promptBase(topic){ return _ppdb.ref("prompter/"+ppKey(topic||"adread")); }
 
-// accept a watch URL, youtu.be link, /live/ link, or a bare 11-char id -- shared by both
-// branches now that Control also embeds a (separately-scrolled) copy of the live chat
-function ytId(s){
-  s=(s||"").trim();
-  const m=s.match(/[?&]v=([\w-]{11})/)||s.match(/(?:youtu\.be|\/live|\/embed)\/([\w-]{11})/)||s.match(/^([\w-]{11})$/);
-  return m?m[1]:"";
-}
-
 if(isDisplay){
   /* ---------------- DISPLAY ---------------- */
   const el={clock:clock,timer:timer,prod:prod,prodBody:prodBody,feed:feed,
             promptView:promptView,promptFlip:promptFlip,promptText:promptText,promptLine:promptLine,
-            chat:chat,bar:bar,status:feedStatus};
+            bar:bar,status:feedStatus};
   let state=null;
 
   window.addEventListener("message",e=>{ if(e.data&&e.data.type==="state"){ state=e.data.state; render(); }});
@@ -464,16 +429,6 @@ if(isDisplay){
     el.promptView.classList.toggle("hidden",!state.promptShow);
     el.promptView.classList.remove("top","bottom");
     if(state.promptMode==="top"||state.promptMode==="bottom") el.promptView.classList.add(state.promptMode);
-    // youtube live chat (embed_domain must be the host serving this page — not file://)
-    const id=ytId(state.chatVideo), showC=state.chatShow&&id&&location.hostname;
-    if(showC){
-      const src="https://www.youtube.com/live_chat?v="+id+"&embed_domain="+location.hostname+"&dark_theme=1";
-      if(el.chat.getAttribute("data-src")!==src){ el.chat.src=src; el.chat.setAttribute("data-src",src); }
-    }
-    el.chat.classList.toggle("hidden",!showC);
-    el.chat.classList.remove("left","right","full");
-    el.chat.classList.add(state.chatSide==="full"?"full":state.chatSide==="left"?"left":"right");
-    el.chat.style.setProperty("--chat-zoom",(state.chatSize||100)/100);
   }
   // 4x/sec tick for clock + running timer
   setInterval(()=>{
@@ -494,7 +449,6 @@ if(isDisplay){
     timerShow:true, timerPos:"tc", timerSize:64,
     clockShow:true, clockSize:34,
     promptShow:false, promptMode:"full", promptTopic:"adread",
-    chatShow:false, chatVideo:"", chatSide:"right", chatSize:100,
     timer:{mode:"down", running:false, remaining:5*60000, endAt:0, elapsed:0, startAt:0}
   }, JSON.parse(localStorage.getItem(SAVE)||"{}"));
 
@@ -509,40 +463,15 @@ if(isDisplay){
   const $=id=>document.getElementById(id);
   // hydrate text inputs
   $("prodText").value=state.prodText;
-  $("chatVideo").value=state.chatVideo;
   $("prodSize").value=state.prodSize; $("timerSize").value=state.timerSize; $("clockSize").value=state.clockSize;
-  $("chatSize").value=state.chatSize;
 
   const bind=(id,key,ev="input",val=e=>e.target.value)=>$(id).addEventListener(ev,e=>{state[key]=val(e);send();});
   bind("prodText","prodText");
-  bind("chatVideo","chatVideo");
   const toInt=fallback=>e=>parseInt(e.target.value,10)||fallback;
   bind("prodSize","prodSize","input",toInt(18));
   bind("timerSize","timerSize","input",toInt(64));
   bind("clockSize","clockSize","input",toInt(34));
-  bind("chatSize","chatSize","input",toInt(100));
   $("prodClear").onclick=()=>{state.prodText="";$("prodText").value="";send();};
-
-  // YouTube chat: same live_chat embed as the Display, so the producer can scroll their own copy
-  // independently to find something they missed (the Display's copy is a separate iframe/instance)
-  function updateCtlChat(){
-    const id=ytId(state.chatVideo);
-    const src=id?"https://www.youtube.com/live_chat?v="+id+"&embed_domain="+location.hostname+"&dark_theme=1":"";
-    if($("ctlChat").getAttribute("data-src")!==src){ $("ctlChat").src=src; $("ctlChat").setAttribute("data-src",src); }
-  }
-  function applyCtlChatZoom(){ $("ctlChat").style.setProperty("--chat-zoom",(state.chatSize||100)/100); }
-  updateCtlChat();
-  applyCtlChatZoom();
-  $("chatVideo").addEventListener("input",updateCtlChat);
-  $("chatSize").addEventListener("input",applyCtlChatZoom);
-
-  // real pop-out window (YouTube's own "is_popout" chat UI) -- fully interactive/scrollable,
-  // and its own window the producer can move/resize/keep on top instead of the cramped embed above
-  $("chatPopout").onclick=()=>{
-    const id=ytId(state.chatVideo);
-    if(!id){ alert("Enter a live video URL or ID first."); return; }
-    window.open("https://www.youtube.com/live_chat?v="+id+"&is_popout=1","cm_chat_popout","width=420,height=720,noopener");
-  };
 
   // SHOW/HIDE toggle buttons (label = the action; green = currently shown)
   const showPaint={};
@@ -551,7 +480,7 @@ if(isDisplay){
     b.onclick=()=>{ state[key]=!state[key]; paint(); send(); }; paint();
     showPaint[key]=paint;
   }
-  ["prodShow","timerShow","clockShow","promptShow","chatShow"].forEach(id=>togBtn(id,id));
+  ["prodShow","timerShow","clockShow","promptShow"].forEach(id=>togBtn(id,id));
   // remote (Companion) set of a show/hide flag -- key is a state property name, e.g. "promptShow"
   function setShowRemote(key,on){
     if(!(key in state)) return;
@@ -570,7 +499,6 @@ if(isDisplay){
   const P9=[["tl","Top left"],["tc","Top center"],["tr","Top right"],["ml","Mid left"],["mc","Center"],["mr","Mid right"],["bl","Bottom left"],["bc","Bottom center"],["br","Bottom right"]];
   fillSel("prodPos",P9);
   fillSel("timerPos",P9);
-  fillSel("chatSide",[["left","Left"],["right","Right"],["full","Full screen"]]);
 
   // teleprompter band mode (scoped seg)
   document.querySelectorAll("#promptModeSeg button").forEach(b=>b.onclick=()=>{
@@ -1094,7 +1022,7 @@ if(isDisplay){
 
     // Companion (or anything else) drives show/hide + timer transport by pushing a new child under:
     //   POST https://pinpoint-abf21-default-rtdb.firebaseio.com/prompter/<topic>/uiq.json
-    //   show a panel:  {"t":"show","key":"prodShow|timerShow|clockShow|promptShow|chatShow","on":true}
+    //   show a panel:  {"t":"show","key":"prodShow|timerShow|clockShow|promptShow","on":true}
     //   toggle a panel: {"t":"toggle","key":"<same keys as above>"}
     //   timer control: {"t":"timer","op":"start|pause|reset"}
     // A real queue (push() + child_added, each command removed once applied) rather than a single
