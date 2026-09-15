@@ -1052,10 +1052,11 @@ if(isDisplay){
     // timestamp rather than a fixed value or repeat-presses of the same button won't re-fire.
     function subscribeTrigger(){
       if(triggerUnsub) triggerUnsub();
+      let sawFirst=false;
       const handler = snap=>{
         const v=snap.val();
+        if(!sawFirst){ sawFirst=true; lastTriggerN=(v && typeof v.n==="number")?v.n:0; return; } // baseline on first snapshot (even if empty); don't replay a stale trigger
         if(!v || typeof v.n!=="number") return;
-        if(lastTriggerN===null){ lastTriggerN=v.n; return; }  // baseline on first snapshot; don't replay a stale trigger
         if(v.n<=lastTriggerN) return;
         lastTriggerN=v.n;
         const name=(v.name||"").trim().toLowerCase();
