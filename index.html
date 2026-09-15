@@ -646,8 +646,17 @@ if(isDisplay){
 
     function msg(t,cls){ const m=$("ppMsg"); m.textContent=t; m.className="msg "+(cls||""); if(t) setTimeout(()=>{ if(m.textContent===t){m.textContent="";m.className="msg";} },4000); }
 
-    function getBlocks(){ return Array.from(editor.children); }
     function blockText(el){ return (el.innerText||el.textContent||"").trim(); }
+    // Google Docs pastes wrap everything in one <b id="docs-internal-guid-...">
+    // around all the real lines — descend past any lone wrapper to the real blocks.
+    function topBlocks(container){
+      let kids = Array.from(container.children).filter(el=>el.tagName!=="BR" || blockText(el));
+      while(kids.length===1 && kids[0].children && kids[0].children.length>1){
+        kids = Array.from(kids[0].children);
+      }
+      return kids;
+    }
+    function getBlocks(){ return topBlocks(editor); }
     function applyTrimVisuals(){
       const blocks=getBlocks();
       blocks.forEach((b,i)=>{
@@ -693,10 +702,13 @@ if(isDisplay){
     }
     editor.addEventListener("click",e=>{
       if(!trimMode) return;
+      const blocks=getBlocks();
+      if(!blocks.length) return;
+      const parent=blocks[0].parentNode;
       let target=e.target;
-      while(target && target.parentNode!==editor) target=target.parentNode;
-      if(!target || target.parentNode!==editor) return;
-      const idx=getBlocks().indexOf(target);
+      while(target && target.parentNode!==parent) target=target.parentNode;
+      if(!target || target.parentNode!==parent) return;
+      const idx=blocks.indexOf(target);
       if(idx<0) return;
       if(trimMode==="start"){
         trimStartIdx=idx;
@@ -758,7 +770,7 @@ if(isDisplay){
     function extractTrimmed(fullHtml, startAnchor, endAnchor){
       if(!startAnchor && !endAnchor) return fullHtml;
       const tmp=document.createElement("div"); tmp.innerHTML=fullHtml;
-      const blocks=Array.from(tmp.children);
+      const blocks=topBlocks(tmp);
       if(!blocks.length) return fullHtml;
       const si=anchorIdx(blocks,startAnchor), ei=anchorIdx(blocks,endAnchor);
       if(si<0 && ei<0) return fullHtml;
