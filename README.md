@@ -8,10 +8,12 @@ Single self-contained HTML file. No build, no server, no dependencies.
 1. Open the [page](https://chrisgrimm-jm.github.io/confidence-monitor/) — that's the **Control** panel.
 2. Click **Open Talent Display** — a second window opens.
 3. In OBS: right-click the program preview → **Windowed Projector (Program)**.
-4. In the Display window: click **Start Feed** and pick that projector window. Drag the Display to the talent's monitor and press **Fullscreen**.
+4. In the Display window: click **Capture Window / Screen** and pick that projector window. Back in Control, pick it from the **Program Feed** → Source dropdown. Drag the Display to the talent's monitor and press **Fullscreen**.
 5. Drive everything from Control — it updates the Display live.
 
 The OBS Windowed Projector can sit anywhere (even hidden); `getDisplayMedia` captures its pixels directly. You put the **Display window** on the talent monitor, not the projector.
+
+**Capture Window / Screen** feeds one shared pool of captured sources — the same button captures a source for either **Program Feed** or **Web / Doc** (or both). Each capture is assigned to a slot from its own Source dropdown in Control; the first capture auto-fills Program Feed, the second auto-fills Web/Doc, and you can reassign either from its dropdown at any time.
 
 Each overlay has a **SHOW/HIDE** button and, where relevant, a position/mode dropdown — all in the card header on the Control panel.
 
