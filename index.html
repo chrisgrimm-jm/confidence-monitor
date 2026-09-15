@@ -39,9 +39,6 @@
   #prompter.bottom{top:auto;bottom:0;height:58%;box-shadow:0 -12px 30px rgba(0,0,0,.6)}
   #chat{position:absolute;top:0;bottom:0;width:min(30vw,380px);border:0;background:#fff}
   #chat.left{left:0} #chat.right{right:0}
-  #web{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
-  #web.top{bottom:auto;height:58%;box-shadow:0 12px 30px rgba(0,0,0,.6)}
-  #web.bottom{top:auto;bottom:0;height:58%;box-shadow:0 -12px 30px rgba(0,0,0,.6)}
   .layer{position:absolute;pointer-events:none;text-shadow:0 2px 8px rgba(0,0,0,.9)}
   /* shared 9-point placement (producer note + timer) */
   .p-tl{top:16px;left:18px} .p-tc{top:12px;left:50%;transform:translateX(-50%)} .p-tr{top:16px;right:18px}
@@ -65,20 +62,16 @@
   <div class="sub">In-studio talent monitor. Overlays show only here — never on the program feed.</div>
 
   <button class="big" id="openDisplay">Open Talent Display →</button>
-  <div class="hint">Opens a second window — that's the Display. Drag it to the talent's monitor and press <b>Fullscreen</b>.</div>
-
-  <div class="card">
-    <h2>Program Feed</h2>
-    <label class="pl">Source</label>
-    <select class="pos" id="feedSource" style="width:100%"><option value="">— capture a window in the Display —</option></select>
-    <div class="hint">In OBS: right-click the program preview → <b>Windowed Projector (Program)</b>. In the Display window
-      click <b>Capture Window / Screen</b> to add it here, then pick it as the source.</div>
-  </div>
+  <div class="hint">Opens a second window. In that window click <b>Capture Feed</b> and pick your OBS
+    <b>Windowed Projector (Program)</b>. Drag it to the talent's screen and press <b>Fullscreen</b>.</div>
 
   <div class="card">
     <h2>Producer Note <span class="hctl"><select class="pos" id="prodPos"></select><button class="tog2" id="prodShow">HIDE</button></span></h2>
     <input type="text" id="prodText" placeholder="Private aside to talent…">
-    <div class="row"><button class="ghost" id="prodClear">Clear</button></div>
+    <div class="row">
+      <button class="ghost" id="prodClear">Clear</button>
+      <span style="font-size:11px;color:#8892a6">Size</span><input class="time-in" type="number" id="prodSize" min="10" max="72">
+    </div>
   </div>
 
   <div class="card">
@@ -94,11 +87,15 @@
       <button id="tStart">Start</button>
       <button class="ghost" id="tPause">Pause</button>
       <button class="ghost" id="tReset">Reset</button>
+      <span style="font-size:11px;color:#8892a6">Size</span><input class="time-in" type="number" id="timerSize" min="20" max="160">
     </div>
   </div>
 
   <div class="card">
     <h2>Clock <button class="tog2" id="clockShow">HIDE</button></h2>
+    <div class="row">
+      <span style="font-size:11px;color:#8892a6">Size</span><input class="time-in" type="number" id="clockSize" min="14" max="80">
+    </div>
     <div class="hint">Wall-clock time of day, top-right.</div>
   </div>
 
@@ -114,16 +111,6 @@
   </div>
 
   <div class="card">
-    <h2>Web / Doc <span class="hctl"><select class="pos" id="webMode"></select><button class="tog2" id="webShow">SHOW</button></span></h2>
-    <label class="pl">Source</label>
-    <select class="pos" id="webSource" style="width:100%"><option value="">— capture a window in the Display —</option></select>
-    <div class="hint">Add windows once: in the <b>Display</b> window click <b>Capture Window</b> for each browser window / monitor
-      you want available (a Google Doc editor, notes, any site). They appear in the <b>Source</b> list above —
-      pick which one the talent sees, then <b>SHOW</b> and choose Full / Top band / Bottom band. Work in the real window on
-      your own screen; your scrolling and edits mirror live.</div>
-  </div>
-
-  <div class="card">
     <h2>YouTube Chat <span class="hctl"><select class="pos" id="chatSide"></select><button class="tog2" id="chatShow">SHOW</button></span></h2>
     <input type="text" id="chatVideo" placeholder="live video URL or ID (e.g. dQw4w9WgXcQ)">
     <div class="hint">Live chat only appears for a video that's <b>currently live</b>. Requires this page to be
@@ -136,14 +123,13 @@
   <video id="feed" autoplay muted playsinline></video>
   <iframe id="prompter" class="hidden" allow="autoplay"></iframe>
   <iframe id="chat" class="hidden"></iframe>
-  <video id="web" class="hidden" autoplay muted playsinline></video>
   <div id="clock" class="layer"></div>
   <div id="timer" class="layer"></div>
   <div id="prod" class="layer"><span class="tag">PRODUCER</span><span id="prodBody"></span></div>
   <div id="bar">
-    <button id="capSrc">Capture Window / Screen</button>
+    <button id="capFeed">Capture Feed</button>
     <button class="ghost" id="fs">Fullscreen</button>
-    <span class="status" id="feedStatus">no sources captured — click Capture Window / Screen</span>
+    <span class="status" id="feedStatus">no feed — click Capture Feed, pick OBS projector window</span>
   </div>
 </div>
 
@@ -166,7 +152,7 @@ function fmt(ms){
 if(isDisplay){
   /* ---------------- DISPLAY ---------------- */
   const el={clock:clock,timer:timer,prod:prod,prodBody:prodBody,feed:feed,
-            prompter:prompter,chat:chat,web:web,bar:bar,status:feedStatus};
+            prompter:prompter,chat:chat,bar:bar,status:feedStatus};
   // accept a watch URL, youtu.be link, /live/ link, or a bare 11-char id
   function ytId(s){
     s=(s||"").trim();
@@ -178,25 +164,14 @@ if(isDisplay){
   window.addEventListener("message",e=>{ if(e.data&&e.data.type==="state"){ state=e.data.state; render(); }});
   if(window.opener) window.opener.postMessage({type:"ready"},"*");
 
-  // captured windows/screens live here in one pool (streams can't cross windows, so capture happens in Display);
-  // Control assigns pool entries to the Program Feed and Web/Doc slots independently via source dropdowns
-  let sources=[], srcSeq=0;
-  function postSources(){
-    if(window.opener) window.opener.postMessage({type:"sources", list:sources.map(s=>({id:s.id,label:s.label}))}, "*");
-  }
-  capSrc.onclick=async()=>{
+  capFeed.onclick=async()=>{
     try{
-      const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:60},audio:false});
-      const track=stream.getVideoTracks()[0];
-      const surface=(track.getSettings&&track.getSettings().displaySurface)||"source";
-      const id="w"+(++srcSeq);
-      const label=surface.charAt(0).toUpperCase()+surface.slice(1)+" "+srcSeq;   // "Window 1", "Monitor 2", "Browser 3"
-      sources.push({id,label,stream});
-      track.onended=()=>{ sources=sources.filter(s=>s.id!==id); postSources(); render(); };
-      el.status.textContent="captured "+label; postSources(); render();
+      const s=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:60},audio:false});
+      el.feed.srcObject=s; el.status.textContent="feed live";
+      s.getVideoTracks()[0].onended=()=>{el.feed.srcObject=null;el.status.textContent="feed stopped";};
     }catch(err){
       el.status.textContent = err && err.name==="NotAllowedError"
-        ? "capture cancelled — if windows were missing/blank, grant Screen Recording to this browser (System Settings ▸ Privacy) and restart it"
+        ? "capture cancelled — if the window was missing/blank, grant Screen Recording to this browser (System Settings ▸ Privacy) and restart it"
         : "capture failed: "+((err&&err.message)||err);
     }
   };
@@ -212,19 +187,18 @@ if(isDisplay){
 
   function render(){
     if(!state) return;
-    // program feed — captured source assigned to the Program Feed slot
-    const feedSrc=sources.find(s=>s.id===state.feedSource);
-    if(feedSrc){ if(el.feed.srcObject!==feedSrc.stream) el.feed.srcObject=feedSrc.stream; }
-    else if(el.feed.srcObject){ el.feed.srcObject=null; }
     // clock
     el.clock.classList.toggle("hidden",!state.clockShow);
+    el.clock.style.fontSize=(state.clockSize||34)+"px";
     // producer
     setPGrid(el.prod, state.prodPos);
     el.prod.classList.toggle("hidden",!(state.prodShow&&state.prodText));
     el.prodBody.textContent=state.prodText||"";
+    el.prod.style.fontSize=(state.prodSize||18)+"px";
     // timer
     setPGrid(el.timer, state.timerPos);
     el.timer.classList.toggle("hidden",!state.timerShow);
+    el.timer.style.fontSize=(state.timerSize||64)+"px";
     // teleprompter (embed the prompter's own display; it syncs itself via Firebase)
     const showP=state.promptShow&&state.promptUrl;
     if(showP && el.prompter.getAttribute("data-src")!==state.promptUrl){
@@ -242,14 +216,6 @@ if(isDisplay){
     el.chat.classList.toggle("hidden",!showC);
     el.chat.classList.remove("left","right");
     el.chat.classList.add(state.chatSide==="left"?"left":"right");
-    // captured window/screen selected from Control's dropdown (producer works in the real window; talent sees pixels)
-    const src=sources.find(s=>s.id===state.webSource);
-    if(src){ if(el.web.srcObject!==src.stream) el.web.srcObject=src.stream; }
-    else if(el.web.srcObject){ el.web.srcObject=null; }
-    const showW=state.webShow && !!src;
-    el.web.classList.toggle("hidden",!showW);
-    el.web.classList.remove("top","bottom");
-    if(state.webMode==="top"||state.webMode==="bottom") el.web.classList.add(state.webMode);
   }
   // 4x/sec tick for clock + running timer
   setInterval(()=>{
@@ -266,42 +232,18 @@ if(isDisplay){
   /* ---------------- CONTROL ---------------- */
   const SAVE="cm_state_v1";
   const state=Object.assign({
-    prodShow:true, prodText:"", prodPos:"tl",
-    timerShow:true, timerPos:"tc", clockShow:true,
+    prodShow:true, prodText:"", prodPos:"tl", prodSize:18,
+    timerShow:true, timerPos:"tc", timerSize:64,
+    clockShow:true, clockSize:34,
     promptShow:false, promptMode:"full",
     promptUrl:"https://chrisgrimm-jm.github.io/prompter/display.html?topic=adread",
     chatShow:false, chatVideo:"", chatSide:"right",
-    webShow:false, webMode:"full", webSource:"", feedSource:"",
     timer:{mode:"down", running:false, remaining:5*60000, endAt:0, elapsed:0, startAt:0}
   }, JSON.parse(localStorage.getItem(SAVE)||"{}"));
 
-  let disp=null, sourcesList=[];
+  let disp=null;
   function send(){ localStorage.setItem(SAVE,JSON.stringify(state)); disp?.postMessage({type:"state",state},"*"); }
-  window.addEventListener("message",e=>{
-    if(!e.data) return;
-    if(e.data.type==="ready"){ send(); }
-    else if(e.data.type==="sources"){
-      sourcesList=e.data.list||[];
-      // drop stale selections
-      if(state.feedSource && !sourcesList.some(s=>s.id===state.feedSource)) state.feedSource="";
-      if(state.webSource && !sourcesList.some(s=>s.id===state.webSource)) state.webSource="";
-      // auto-assign the newest capture to the first empty slot: Program Feed, then Web/Doc
-      const newest=sourcesList[sourcesList.length-1];
-      if(newest){
-        if(!state.feedSource) state.feedSource=newest.id;
-        else if(!state.webSource) state.webSource=newest.id;
-      }
-      renderSources(); send();
-    }
-  });
-  function renderSources(){
-    [["feedSource","feedSource"],["webSource","webSource"]].forEach(([id,key])=>{
-      const s=$(id); s.innerHTML="";
-      if(!sourcesList.length){ s.innerHTML='<option value="">— capture a window in the Display —</option>'; }
-      else sourcesList.forEach(src=>{ const o=document.createElement("option"); o.value=src.id; o.textContent=src.label; s.appendChild(o); });
-      s.value=state[key]||"";
-    });
-  }
+  window.addEventListener("message",e=>{ if(e.data&&e.data.type==="ready") send(); });
 
   openDisplay.onclick=()=>{
     disp=window.open(location.pathname+"#display","cm_display","width=1280,height=720");
@@ -311,11 +253,16 @@ if(isDisplay){
   // hydrate text inputs
   $("prodText").value=state.prodText; $("promptUrl").value=state.promptUrl;
   $("chatVideo").value=state.chatVideo;
+  $("prodSize").value=state.prodSize; $("timerSize").value=state.timerSize; $("clockSize").value=state.clockSize;
 
   const bind=(id,key,ev="input",val=e=>e.target.value)=>$(id).addEventListener(ev,e=>{state[key]=val(e);send();});
   bind("prodText","prodText");
   bind("promptUrl","promptUrl");
   bind("chatVideo","chatVideo");
+  const toInt=fallback=>e=>parseInt(e.target.value,10)||fallback;
+  bind("prodSize","prodSize","input",toInt(18));
+  bind("timerSize","timerSize","input",toInt(64));
+  bind("clockSize","clockSize","input",toInt(34));
   $("prodClear").onclick=()=>{state.prodText="";$("prodText").value="";send();};
 
   // SHOW/HIDE toggle buttons (label = the action; green = currently shown)
@@ -323,7 +270,7 @@ if(isDisplay){
     const b=$(id), paint=()=>{ b.textContent=state[key]?"HIDE":"SHOW"; b.classList.toggle("on",!!state[key]); };
     b.onclick=()=>{ state[key]=!state[key]; paint(); send(); }; paint();
   }
-  ["prodShow","timerShow","clockShow","promptShow","chatShow","webShow"].forEach(id=>togBtn(id,id));
+  ["prodShow","timerShow","clockShow","promptShow","chatShow"].forEach(id=>togBtn(id,id));
 
   // position dropdowns (id === state key)
   function fillSel(id,opts){
@@ -336,9 +283,6 @@ if(isDisplay){
   fillSel("prodPos",P9);
   fillSel("timerPos",P9);
   fillSel("chatSide",[["left","Left"],["right","Right"]]);
-  fillSel("webMode",[["full","Full screen"],["top","Top band"],["bottom","Bottom band"]]);
-  $("webSource").addEventListener("change",()=>{ state.webSource=$("webSource").value; send(); });
-  $("feedSource").addEventListener("change",()=>{ state.feedSource=$("feedSource").value; send(); });
 
   // teleprompter band mode (scoped seg)
   document.querySelectorAll("#promptModeSeg button").forEach(b=>b.onclick=()=>{
