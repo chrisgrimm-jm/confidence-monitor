@@ -98,9 +98,13 @@
      explicit z-index because these overlays don't otherwise follow DOM order in a stable way. */
   #display{position:fixed;inset:0;background:#000;overflow:hidden}
   #feed{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:1}
-  #chat{position:absolute;top:0;height:100%;width:min(30vw,380px);border:0;background:#0f0f0f;z-index:2}
-  #chat.left{left:0} #chat.right{right:0}
-  #chat.full{left:0;right:0;width:100%}
+  /* --chat-zoom scales the embed's own rendering up (YouTube's chat text can't be resized directly,
+     it's a cross-origin iframe) while the element's own footprint stays the same size: shrink the box
+     by the same factor first, then transform:scale it back up so it paints at full size again. */
+  #chat{position:absolute;top:0;height:calc(100% / var(--chat-zoom,1));width:calc(min(30vw,380px) / var(--chat-zoom,1));border:0;background:#0f0f0f;z-index:2;transform:scale(var(--chat-zoom,1));transform-origin:top left}
+  #chat.left{left:0}
+  #chat.right{right:0;transform-origin:top right}
+  #chat.full{left:0;right:0;width:calc(100% / var(--chat-zoom,1))}
   #promptView{position:absolute;inset:0;overflow:hidden;background:#0b0b0b;z-index:3}
   #promptView.top{bottom:auto;height:58%;box-shadow:0 12px 30px rgba(0,0,0,.6)}
   #promptView.bottom{top:auto;bottom:0;height:58%;box-shadow:0 -12px 30px rgba(0,0,0,.6)}
@@ -279,6 +283,10 @@
     <input type="text" id="chatVideo" placeholder="live video URL or ID (e.g. dQw4w9WgXcQ)">
     <div class="hint">Live chat only appears for a video that's <b>currently live</b>. Requires this page to be
       hosted (GitHub Pages) — YouTube won't embed chat from a local <code>file://</code>.</div>
+    <div class="row">
+      <span style="font-size:11px;color:#8892a6">Zoom (Display only — it's a YouTube embed, we can't set its font size directly)</span>
+      <input class="time-in" type="number" id="chatSize" min="50" max="250" step="10">%
+    </div>
 
     <iframe id="ctlChat" style="width:100%;height:320px;border:0;border-radius:8px;background:#0f0f0f;margin-top:10px"></iframe>
 
@@ -473,6 +481,7 @@ if(isDisplay){
     el.chat.classList.toggle("hidden",!showC);
     el.chat.classList.remove("left","right","full");
     el.chat.classList.add(state.chatSide==="full"?"full":state.chatSide==="left"?"left":"right");
+    el.chat.style.setProperty("--chat-zoom",(state.chatSize||100)/100);
     // chat highlight (a specific message the producer pulled out and pushed to the talent)
     setPGrid(el.chatHl, state.chatHlPos);
     el.chatHl.classList.toggle("hidden",!(state.chatHlShow&&state.chatHlText));
@@ -499,7 +508,7 @@ if(isDisplay){
     timerShow:true, timerPos:"tc", timerSize:64,
     clockShow:true, clockSize:34,
     promptShow:false, promptMode:"full", promptTopic:"adread",
-    chatShow:false, chatVideo:"", chatSide:"right",
+    chatShow:false, chatVideo:"", chatSide:"right", chatSize:100,
     chatHlShow:false, chatHlPos:"bl", chatHlName:"", chatHlText:"", chatHlSize:18,
     timer:{mode:"down", running:false, remaining:5*60000, endAt:0, elapsed:0, startAt:0}
   }, JSON.parse(localStorage.getItem(SAVE)||"{}"));
@@ -519,6 +528,7 @@ if(isDisplay){
   $("chatHlName").value=state.chatHlName; $("chatHlText").value=state.chatHlText;
   $("prodSize").value=state.prodSize; $("timerSize").value=state.timerSize; $("clockSize").value=state.clockSize;
   $("chatHlSize").value=state.chatHlSize;
+  $("chatSize").value=state.chatSize;
 
   const bind=(id,key,ev="input",val=e=>e.target.value)=>$(id).addEventListener(ev,e=>{state[key]=val(e);send();});
   bind("prodText","prodText");
@@ -529,6 +539,7 @@ if(isDisplay){
   bind("prodSize","prodSize","input",toInt(18));
   bind("timerSize","timerSize","input",toInt(64));
   bind("clockSize","clockSize","input",toInt(34));
+  bind("chatSize","chatSize","input",toInt(100));
   bind("chatHlSize","chatHlSize","input",toInt(18));
   $("prodClear").onclick=()=>{state.prodText="";$("prodText").value="";send();};
 
