@@ -231,8 +231,8 @@
 
   <div class="colRight">
   <button class="big" id="openDisplay">Open Talent Display →</button>
-  <div class="hint">Opens a second window. In that window click <b>Capture Feed</b> and pick your OBS
-    <b>Windowed Projector (Program)</b>. Drag it to the talent's screen and press <b>Fullscreen</b>.</div>
+  <div class="hint">Opens a second window. In that window click <b>Use Camera (NDI)</b> (OBS via DistroAV + NDI Webcam Input),
+    or <b>Capture Feed</b> and pick your OBS <b>Windowed Projector (Program)</b>. Drag it to the talent's screen and press <b>Fullscreen</b>.</div>
 
   <div class="card">
     <h2>Producer Note <span class="hctl"><select class="pos" id="prodPos"></select><button class="tog2" id="prodShow">HIDE</button></span></h2>
@@ -284,8 +284,10 @@
   <div id="prod" class="layer"><span class="tag">PRODUCER</span><span id="prodBody"></span></div>
   <div id="bar">
     <button id="capFeed">Capture Feed</button>
+    <button id="useCam">Use Camera (NDI)</button>
+    <select id="camSel" class="hidden"></select>
     <button class="ghost" id="fs">Fullscreen</button>
-    <span class="status" id="feedStatus">no feed — click Capture Feed, pick OBS projector window</span>
+    <span class="status" id="feedStatus">no feed — click Use Camera (NDI), or Capture Feed and pick the OBS projector window</span>
   </div>
 </div>
 
@@ -331,17 +333,56 @@ if(isDisplay){
   window.addEventListener("message",e=>{ if(e.data&&e.data.type==="state"){ state=e.data.state; render(); }});
   if(window.opener) window.opener.postMessage({type:"ready"},"*");
 
+  // one place that swaps the feed source, so the old stream's end event can't trigger the new one's retry
+  let feedStream=null, retry=null;
+  function setFeed(stream,msg){
+    clearTimeout(retry);
+    if(feedStream) feedStream.getTracks().forEach(t=>{ t.onended=null; t.stop(); });
+    feedStream=stream; el.feed.srcObject=stream; el.status.textContent=msg;
+  }
+
   capFeed.onclick=async()=>{
     try{
+      localStorage.removeItem("cm_cam");
       const s=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:60},audio:false});
-      el.feed.srcObject=s; el.status.textContent="feed live";
-      s.getVideoTracks()[0].onended=()=>{el.feed.srcObject=null;el.status.textContent="feed stopped";};
+      setFeed(s,"feed live (screen capture)");
+      s.getVideoTracks()[0].onended=()=>{ setFeed(null,"feed stopped"); };
     }catch(err){
       el.status.textContent = err && err.name==="NotAllowedError"
         ? "capture cancelled — if the window was missing/blank, grant Screen Recording to this browser (System Settings ▸ Privacy) and restart it"
         : "capture failed: "+((err&&err.message)||err);
     }
   };
+
+  // NDI route: OBS (DistroAV) -> NDI Tools "Webcam Input" shows up as a normal camera. Camera permission,
+  // unlike screen capture, is remembered by the browser, so the saved device auto-connects on load.
+  const gum=v=>navigator.mediaDevices.getUserMedia({video:Object.assign({width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:60}},v),audio:false});
+  async function startCam(prefer){
+    try{
+      let s=null;
+      if(prefer) try{ s=await gum({deviceId:{exact:prefer}}); }catch(e){}   // remembered device, no other camera flickers on
+      if(!s) s=await gum({});                    // first run: grants permission so device labels become readable
+      const cams=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==="videoinput");
+      const pick=cams.find(d=>d.deviceId===prefer)||cams.find(d=>/ndi/i.test(d.label));
+      if(pick && pick.deviceId!==s.getVideoTracks()[0].getSettings().deviceId){
+        s.getTracks().forEach(t=>t.stop()); s=await gum({deviceId:{exact:pick.deviceId}});
+      }
+      const id=s.getVideoTracks()[0].getSettings().deviceId;
+      camSel.innerHTML=""; cams.forEach(d=>camSel.add(new Option(d.label||"camera",d.deviceId))); camSel.value=id;
+      camSel.classList.remove("hidden");
+      localStorage.setItem("cm_cam",id);
+      setFeed(s,"feed live (camera: "+(cams.find(d=>d.deviceId===id)||{}).label+")");
+      s.getVideoTracks()[0].onended=()=>{ setFeed(null,"camera lost — retrying…"); retry=setTimeout(()=>startCam(id),3000); };
+    }catch(err){
+      el.status.textContent = err && err.name==="NotAllowedError"
+        ? "camera blocked — allow camera access for this site in the browser's address bar"
+        : "camera failed: "+((err&&err.message)||err);
+      if(prefer) retry=setTimeout(()=>startCam(prefer),3000);
+    }
+  }
+  useCam.onclick=()=>startCam(localStorage.getItem("cm_cam"));
+  camSel.onchange=()=>startCam(camSel.value);
+  if(localStorage.getItem("cm_cam")) startCam(localStorage.getItem("cm_cam"));
   fs.onclick=()=>{ document.documentElement.requestFullscreen?.(); };
 
   /* auto-hide toolbar */
