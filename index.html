@@ -54,6 +54,7 @@
   #promptCtl #ppLibList{display:flex;flex-direction:column;gap:8px;max-height:40vh;overflow:auto}
   #promptCtl .libItem{display:flex;align-items:center;gap:8px;background:#0b0f16;border:1px solid var(--pp-edge);border-radius:10px;padding:8px 10px}
   #promptCtl .libItem.active{border-color:var(--pp-live);box-shadow:0 0 0 1px var(--pp-live) inset}
+  #promptCtl .libItem .grip{color:var(--pp-dim);cursor:grab;font-size:16px;line-height:1;user-select:none}
   #promptCtl .libGo{flex:1;text-align:left;display:flex;align-items:center;gap:9px;background:transparent;border:none;color:var(--pp-txt);font-size:14px;padding:5px 4px;border-radius:7px}
   #promptCtl .libGo:hover{background:#141b26;border:none}
   #promptCtl .libGo .tri{color:var(--pp-live);font-size:15px}
@@ -785,6 +786,14 @@ if(isDisplay){
     $("ppTrimClear").onclick=clearTrim;
 
     function findScript(id){ return library.find(s=>s.id===id) || null; }
+    let dragId=null, dropAfter=false;
+    function moveScript(fromId,toId,after){
+      if(!fromId||fromId===toId) return;
+      const ids=library.map(x=>x.id).filter(id=>id!==fromId);
+      ids.splice(ids.indexOf(toId)+(after?1:0),0,fromId);
+      const up={}; ids.forEach((id,n)=>up[id+"/order"]=n);   // rewrite every index so the order is fully explicit
+      scriptsRef.update(up);
+    }
     function renderLib(){
       const box=$("ppLibList"); box.innerHTML="";
       if(!library.length){
@@ -794,6 +803,14 @@ if(isDisplay){
       library.forEach(s=>{
         const row=document.createElement("div");
         row.className="libItem"+(s.id===activeId?" active":"");
+        row.draggable=true;
+        row.ondragstart=e=>{ dragId=s.id; e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",s.id); setTimeout(()=>row.style.opacity=".4",0); };
+        row.ondragend=()=>{ dragId=null; renderLib(); };
+        row.ondragover=e=>{ if(!dragId) return; e.preventDefault(); const r=row.getBoundingClientRect(); dropAfter=e.clientY>r.top+r.height/2;
+          row.style.boxShadow=(dropAfter?"0 3px":"0 -3px")+" 0 0 var(--pp-live)"; };
+        row.ondragleave=()=>{ row.style.boxShadow=""; };
+        row.ondrop=e=>{ e.preventDefault(); moveScript(dragId,s.id,dropAfter); };
+        const grip=document.createElement("span"); grip.className="grip"; grip.textContent="⠿"; grip.title="Drag to reorder";
         const wc=wordCount(s.html);
         const go=document.createElement("button");
         go.className="libGo";
@@ -807,7 +824,7 @@ if(isDisplay){
         const edit=document.createElement("button"); edit.className="iconBtn"; edit.textContent="✎"; edit.title="Edit"; edit.onclick=()=>loadIntoEditor(s);
         const del=document.createElement("button"); del.className="iconBtn"; del.textContent="🗑"; del.title="Delete";
         del.onclick=()=>{ if(confirm('Delete "'+(s.name||"Untitled")+'"?')){ scriptsRef.child(s.id).remove(); if(editingId===s.id) newScript(); } };
-        row.appendChild(go); row.appendChild(edit); row.appendChild(del);
+        row.appendChild(grip); row.appendChild(go); row.appendChild(edit); row.appendChild(del);
         box.appendChild(row);
       });
     }
@@ -1036,8 +1053,10 @@ if(isDisplay){
       if(libUnsub) libUnsub();
       const handler = snap=>{
         const v=snap.val()||{};
-        library=Object.keys(v).map(k=>({id:k, name:v[k].name, html:v[k].html, ts:v[k].ts||0, trimStart:v[k].trimStart||null, trimEnd:v[k].trimEnd||null, docUrl:v[k].docUrl||null, settings:v[k].settings||null, seekFrac:typeof v[k].seekFrac==="number"?v[k].seekFrac:null}));
-        library.sort((a,b)=>(a.ts||0)-(b.ts||0));
+        library=Object.keys(v).map(k=>({id:k, name:v[k].name, html:v[k].html, ts:v[k].ts||0, trimStart:v[k].trimStart||null, trimEnd:v[k].trimEnd||null, docUrl:v[k].docUrl||null, order:typeof v[k].order==="number"?v[k].order:null, settings:v[k].settings||null, seekFrac:typeof v[k].seekFrac==="number"?v[k].seekFrac:null}));
+        // manual order first (indices written by drag-reorder); anything never ordered (e.g. newly saved) falls after, by creation time
+        const key=x=>x.order!=null?x.order:(x.ts||0);
+        library.sort((a,b)=>key(a)-key(b));
         renderLib(); setNowLive();
       };
       scriptsRef.on("value", handler);
