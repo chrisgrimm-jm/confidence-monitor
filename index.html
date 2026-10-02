@@ -363,7 +363,7 @@ if(isDisplay){
       if(prefer) try{ s=await gum({deviceId:{exact:prefer}}); }catch(e){}   // remembered device, no other camera flickers on
       if(!s) s=await gum({});                    // first run: grants permission so device labels become readable
       const cams=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==="videoinput");
-      const pick=cams.find(d=>d.deviceId===prefer)||cams.find(d=>/ndi/i.test(d.label));
+      const pick=cams.find(d=>d.deviceId===prefer)||cams.find(d=>/ndi|obs virtual/i.test(d.label));
       if(pick && pick.deviceId!==s.getVideoTracks()[0].getSettings().deviceId){
         s.getTracks().forEach(t=>t.stop()); s=await gum({deviceId:{exact:pick.deviceId}});
       }

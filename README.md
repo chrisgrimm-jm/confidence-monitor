@@ -13,7 +13,7 @@ Two ways to get the OBS program feed into the Display. **Option A (NDI camera) i
 1. One-time: install the [DistroAV](https://github.com/DistroAV/DistroAV) plugin in OBS and the free NDI Tools (ndi.video). In OBS: Tools → DistroAV NDI Settings → enable **Main Output** (sends the Program feed over NDI).
 2. Open **NDI Webcam Input** (from NDI Tools) and pick the OBS source — it now appears to the Mac as a camera. Leave that app running.
 3. Open the [page](https://chrisgrimm-jm.github.io/confidence-monitor/) (**Control**) → **Open Talent Display**.
-4. In the Display window: click **Use Camera (NDI)** and allow camera access once. It auto-picks a device with "NDI" in its name (or choose from the dropdown that appears). The choice is remembered: next time the Display opens, it connects by itself, and if the camera drops (e.g. NDI Webcam Input restarted) it retries every 3 seconds.
+4. In the Display window: click **Use Camera (NDI)** and allow camera access once. It auto-picks a device with "NDI" or "OBS Virtual Camera" in its name (or choose from the dropdown that appears). The choice is remembered: next time the Display opens, it connects by itself, and if the camera drops (e.g. NDI Webcam Input restarted) it retries every 3 seconds.
 5. Drag the Display to the talent's monitor and press **Fullscreen**. Drive everything from Control.
 
 This is a camera, not a screen capture, so there's no mirror-loop risk and nothing to keep windowed or hidden. Adds a few frames of delay versus a direct window capture (roughly 100-250 ms — fine for reading text). Your OBS Virtual Camera for vdo.ninja is a separate device and stays untouched.
